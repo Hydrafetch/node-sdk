@@ -2,16 +2,23 @@ import { HydrafetchError, HydrafetchTimeoutError } from './errors.js';
 import type {
   BatchOptions,
   BrandOptions,
+  BrandResult,
   CrawlOptions,
   ExtractOptions,
+  ExtractResult,
+  Format,
+  ImagesResult,
   JobResult,
+  LogoResult,
   MapOptions,
   MapResult,
   ScrapeOptions,
   ScrapeResult,
   ScreenshotOptions,
+  ScreenshotResult,
   SearchOptions,
   SearchResult,
+  StyleguideResult,
   WaitOptions,
 } from './types.js';
 
@@ -93,8 +100,6 @@ export class Hydrafetch {
       try {
         const res = await this.fetchImpl(url.toString(), {
           method,
-          // REST authenticates with X-API-Key. The MCP endpoint uses Authorization: Bearer
-          // instead; they are not interchangeable, and this client only speaks REST.
           headers: {
             'X-API-Key': this.apiKey,
             'content-type': 'application/json',
@@ -126,7 +131,6 @@ export class Hydrafetch {
           continue;
         }
 
-        // Job-accepting endpoints answer with the id at the top level rather than under data.
         return (parsed?.data ?? (parsed as unknown as T)) as T;
       } catch (error) {
         if (error instanceof HydrafetchError) {
@@ -148,9 +152,28 @@ export class Hydrafetch {
     throw lastError ?? new HydrafetchError({ code: 'UNKNOWN', message: 'Request failed', status: 500 });
   }
 
-  /** One page as clean Markdown and structured data. One credit. */
-  scrape(url: string, options: ScrapeOptions = {}): Promise<ScrapeResult> {
-    return this.request<ScrapeResult>('POST', '/v1/web/scrape', { url, ...options });
+  /**
+   * One page as clean Markdown and structured data. One credit.
+   *
+   * The return type follows the formats you ask for, so the ones you requested
+   * are not optional:
+   *
+   * ```ts
+   * const a = await hf.scrape(url);                            // a.markdown: string
+   * const b = await hf.scrape(url, { formats: ['html'] });     // b.html: string
+   * ```
+   */
+  scrape<const F extends readonly Format[] = ['markdown']>(
+    url: string,
+    options: ScrapeOptions<F> = {},
+  ): Promise<ScrapeResult<F[number]>> {
+    return this.request('POST', '/v1/web/scrape', { url, ...options });
+  }
+
+  /** A page straight to a Markdown string, for when that is all you want. */
+  async markdown(url: string, options: Omit<ScrapeOptions, 'formats'> = {}): Promise<string> {
+    const page = await this.scrape(url, { ...options, formats: ['markdown'] });
+    return page.markdown;
   }
 
   /** A site's URLs from its sitemap and links, without fetching the pages. One credit. */
@@ -164,41 +187,44 @@ export class Hydrafetch {
   }
 
   /** Typed JSON from one or more URLs. Five credits per URL. */
-  extract<T = unknown>(urls: string | string[], options: ExtractOptions = {}): Promise<T> {
-    return this.request<T>('POST', '/v1/web/extract', {
+  extract<T = unknown>(
+    urls: string | string[],
+    options: ExtractOptions = {},
+  ): Promise<ExtractResult<T>> {
+    return this.request<ExtractResult<T>>('POST', '/v1/web/extract', {
       urls: Array.isArray(urls) ? urls : [urls],
       ...options,
     });
   }
 
   /** A company's brand from its domain. Five credits. */
-  brand(domain: string): Promise<Record<string, unknown>> {
-    return this.request('GET', '/v1/web/brand', undefined, { domain });
+  brand(domain: string): Promise<BrandResult> {
+    return this.request<BrandResult>('GET', '/v1/web/brand', undefined, { domain });
   }
 
   /** One embeddable logo. One credit, a fifth of a full brand resolve. */
-  logo(domain: string, options: BrandOptions = {}): Promise<Record<string, unknown>> {
-    return this.request('GET', '/v1/web/brand/logo', undefined, { domain, ...options });
+  logo(domain: string, options: BrandOptions = {}): Promise<LogoResult> {
+    return this.request<LogoResult>('GET', '/v1/web/brand/logo', undefined, { domain, ...options });
   }
 
   /** A site's design system, read from computed styles in a real browser. Ten credits. */
-  styleguide(domain: string): Promise<Record<string, unknown>> {
-    return this.request('GET', '/v1/web/styleguide', undefined, { domain });
+  styleguide(domain: string): Promise<StyleguideResult> {
+    return this.request<StyleguideResult>('GET', '/v1/web/styleguide', undefined, { domain });
   }
 
   /** A rendered PNG of the page, returned as a public URL. Five credits. */
-  screenshot(url: string, options: ScreenshotOptions = {}): Promise<Record<string, unknown>> {
-    return this.request('POST', '/v1/web/screenshot', { url, ...options });
+  screenshot(url: string, options: ScreenshotOptions = {}): Promise<ScreenshotResult> {
+    return this.request<ScreenshotResult>('POST', '/v1/web/screenshot', { url, ...options });
   }
 
   /** A page's images with metadata, without rendering it. One credit. */
-  images(url: string, options: { maxAge?: number } = {}): Promise<Record<string, unknown>> {
-    return this.request('POST', '/v1/web/images', { url, ...options });
+  images(url: string, options: { maxAge?: number } = {}): Promise<ImagesResult> {
+    return this.request<ImagesResult>('POST', '/v1/web/images', { url, ...options });
   }
 
   /** A page's links. One credit. */
-  links(url: string, options: ScrapeOptions = {}): Promise<Record<string, unknown>> {
-    return this.request('POST', '/v1/web/links', { url, ...options });
+  links(url: string, options: Omit<ScrapeOptions, 'formats'> = {}): Promise<ScrapeResult<'links'>> {
+    return this.request<ScrapeResult<'links'>>('POST', '/v1/web/links', { url, ...options });
   }
 
   /**

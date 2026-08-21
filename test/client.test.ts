@@ -40,8 +40,6 @@ function clientWith(fetchImpl: typeof globalThis.fetch, overrides = {}) {
 }
 
 describe('auth', () => {
-  // REST authenticates with X-API-Key. The MCP endpoint is the one that takes
-  // Authorization: Bearer, and confusing the two is a real mistake that shipped once.
   it('sends the key as X-API-Key and never as a bearer token', async () => {
     const fetchImpl = mockFetch(() => jsonResponse({ success: true, data: { url: 'u' } }));
     await clientWith(fetchImpl).scrape('https://example.com');
