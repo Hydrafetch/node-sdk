@@ -3,7 +3,6 @@ import { Hydrafetch, HydrafetchError, HydrafetchTimeoutError } from '../src/inde
 
 type FetchMock = MockedFunction<typeof globalThis.fetch>;
 
-/** A fetch mock with the real two-argument signature, so call assertions stay typed. */
 function mockFetch(
   handler: (url: string, init: RequestInit) => Response | Promise<Response>,
 ): FetchMock {
@@ -12,7 +11,6 @@ function mockFetch(
   ) as FetchMock;
 }
 
-/** The request the mock saw, with the tuple narrowing done once instead of at every call site. */
 function callAt(f: FetchMock, i = 0): { url: string; init: RequestInit } {
   const call = f.mock.calls[i];
   if (!call) throw new Error(`no fetch call at index ${i}`);

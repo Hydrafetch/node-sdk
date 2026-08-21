@@ -1,6 +1,6 @@
 {
   "name": "@hydrafetch/node-sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Official Node/TypeScript client for the Hydrafetch web data API. Turn any URL into clean Markdown and structured data.",
   "keywords": [
     "hydrafetch",

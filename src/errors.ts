@@ -25,22 +25,18 @@ export class HydrafetchError extends Error {
     this.details = args.details;
   }
 
-  /** 401 and 403. Retrying without changing the key is pointless. */
   get isAuth(): boolean {
     return this.status === 401 || this.status === 403;
   }
 
-  /** 402. The workspace is out of credits. */
   get isOutOfCredits(): boolean {
     return this.status === 402;
   }
 
-  /** 400 and 422. The request itself is wrong; a repeat costs another call and fails again. */
   get isInvalidRequest(): boolean {
     return this.status === 400 || this.status === 422;
   }
 
-  /** 429 and 5xx. Worth another attempt after a wait. */
   get isRetryable(): boolean {
     return this.status === 429 || this.status >= 500;
   }

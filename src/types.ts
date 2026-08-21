@@ -21,7 +21,6 @@ export interface PageMetadata {
   [key: string]: unknown;
 }
 
-/** What each format puts on a scrape result. */
 export interface ScrapeContent {
   markdown: string;
   html: string;
@@ -35,7 +34,6 @@ export interface ScrapeContent {
 
 export interface ScrapeBase {
   url: string;
-  /** Where the request landed after redirects. */
   finalUrl?: string;
   redirected?: boolean;
   status?: number;
@@ -46,39 +44,22 @@ export interface ScrapeBase {
   quality?: Record<string, unknown>;
 }
 
-/**
- * A scrape result, narrowed to the formats you asked for.
- *
- * The requested formats are required; every other format stays optional, so
- * `page.markdown` needs no null check when you asked for markdown.
- */
 export type ScrapeResult<F extends Format = 'markdown'> = ScrapeBase &
   { [K in F]: ScrapeContent[K] } & Partial<Omit<ScrapeContent, F>>;
 
 export interface ScrapeOptions<F extends readonly Format[] = readonly Format[]> {
-  /** Which outputs to return. Defaults to `['markdown']`. */
   formats?: F;
-  /** Serve a cached capture up to this many milliseconds old. */
   maxAge?: number;
-  /** Only answer from cache; never fetch. */
   cacheOnly?: boolean;
   storeInCache?: boolean;
-  /**
-   * Keep headings, lists and tables. Off by default, which optimises for raw
-   * content and can read as one unstructured blob on marketing and listing
-   * pages — turn it on and retry when the structure matters.
-   */
   preferStructure?: boolean;
-  /** Drop navigation, footers and banners. */
   onlyMainContent?: boolean;
   includeTags?: string[];
   excludeTags?: string[];
   removeBase64Images?: boolean;
   blockAds?: boolean;
   includeLinks?: boolean;
-  /** Milliseconds to wait after load before capturing. */
   waitFor?: number;
-  /** Per-request ceiling in milliseconds. */
   timeout?: number;
   headers?: Record<string, string>;
   jsonOptions?: Record<string, unknown>;
@@ -106,7 +87,6 @@ export interface MapResult {
 
 export interface SearchOptions {
   limit?: number;
-  /** Also fetch each result as markdown, at one extra credit per page. */
   scrapeResults?: boolean;
   scrapeOptions?: ScrapeOptions;
   timeRange?: string;
@@ -120,7 +100,6 @@ export interface SearchResultItem {
   url: string;
   snippet: string;
   rank: number;
-  /** Populated only when `scrapeResults` was set. */
   data?: ScrapeResult;
 }
 
@@ -131,9 +110,7 @@ export interface SearchResult {
 }
 
 export interface ExtractOptions {
-  /** A JSON Schema the result must conform to. */
   schema?: Record<string, unknown>;
-  /** Natural-language description of what to pull, instead of or alongside a schema. */
   prompt?: string;
   preferStructure?: boolean;
   enableWebSearch?: boolean;
@@ -145,17 +122,14 @@ export interface ExtractOptions {
 
 export interface ExtractItem<T = unknown> {
   url: string;
-  /** The extracted object, shaped by your schema. */
   data?: T;
   fields?: Record<string, unknown>;
   error?: string;
 }
 
 export interface ExtractResult<T = unknown> {
-  /** One entry per URL, in the order you passed them. */
   results: ExtractItem<T>[];
   sources?: unknown[];
-  /** Present when `mergeEntities` folded the pages into one record. */
   collection?: { data?: T; sources?: unknown[] }[];
 }
 
@@ -165,15 +139,12 @@ export interface CrawlOptions {
   includePaths?: string[];
   excludePaths?: string[];
   allowSubdomains?: boolean;
-  /** Called on progress and completion instead of you polling. */
   webhook?: string;
-  /** Per-page options. These do NOT go at the top level. */
   scrapeOptions?: ScrapeOptions;
 }
 
 export interface BatchOptions {
   webhook?: string;
-  /** Per-page options. These do NOT go at the top level. */
   scrapeOptions?: ScrapeOptions;
 }
 
@@ -187,7 +158,6 @@ export interface JobPage {
   error?: string;
   errorCode?: string;
   retryable?: boolean;
-  /** The page itself, once it succeeded. */
   data?: ScrapeResult;
 }
 
@@ -200,14 +170,11 @@ export interface JobResult {
   completed?: number;
   failed?: number;
   creditsUsed?: number;
-  /** The per-page results. Note: `pages`, not `data`. */
   pages?: JobPage[];
 }
 
 export interface BrandOptions {
-  /** The background the logo will sit on. */
   theme?: 'light' | 'dark' | 'auto';
-  /** The square mark, or the full logotype. */
   type?: 'icon' | 'wordmark';
 }
 
@@ -238,7 +205,6 @@ export interface StyleguideResult {
 }
 
 export interface ScreenshotOptions {
-  /** Capture the whole scrollable page rather than the viewport. */
   fullPage?: boolean;
   waitFor?: number;
   timeout?: number;
@@ -250,7 +216,6 @@ export interface ScreenshotResult {
   url: string;
   finalUrl?: string;
   status?: number;
-  /** Public URL of the captured PNG. */
   screenshot: string;
   screenshotType?: string;
   width?: number;
@@ -272,10 +237,7 @@ export interface ImagesResult {
 }
 
 export interface WaitOptions {
-  /** How long to keep polling before giving up. Default 300000. */
   timeoutMs?: number;
-  /** Gap between polls. Default 2000. */
   pollIntervalMs?: number;
-  /** Called after every poll, for progress reporting. */
   onProgress?: (job: JobResult) => void;
 }
