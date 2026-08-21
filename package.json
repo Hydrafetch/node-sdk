@@ -1,0 +1,55 @@
+{
+  "name": "@hydrafetch/node-sdk",
+  "version": "0.1.0",
+  "description": "Official Node/TypeScript client for the Hydrafetch web data API. Turn any URL into clean Markdown and structured data.",
+  "keywords": [
+    "hydrafetch",
+    "web-scraping",
+    "markdown",
+    "llm",
+    "rag",
+    "crawler",
+    "structured-data",
+    "agents"
+  ],
+  "homepage": "https://hydrafetch.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hydrafetch/node-sdk.git"
+  },
+  "bugs": "https://github.com/Hydrafetch/node-sdk/issues",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run typecheck && npm run test && npm run build"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
