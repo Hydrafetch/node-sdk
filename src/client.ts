@@ -51,36 +51,86 @@ function sleep(ms: number): Promise<void> {
  * Hand the API a JSON Schema, whatever the caller had.
  *
  * Zod is not a dependency and is imported only when a Zod schema is actually passed, so the
- * package still installs with none. Zod 4 converts its own schemas, so most callers need nothing
- * else. Zod 3 has no converter and is still widely used, so zod-to-json-schema is honoured when it
- * is present rather than refusing a schema we could have converted.
+ * package still installs with none. Which converter to use is decided by the schema's own version
+ * rather than the installed one, because a workspace can hold both.
  */
 async function toJsonSchema(schema: ExtractSchema): Promise<Record<string, unknown>> {
-  const looksZod =
-    typeof schema === 'object' &&
-    schema !== null &&
-    ('_zod' in schema || '_def' in schema) &&
-    typeof (schema as ZodLike).parse === 'function';
-  if (!looksZod) return schema as Record<string, unknown>;
+  const zodVersion = zodMajorOf(schema);
+  if (zodVersion === null) return schema as Record<string, unknown>;
 
-  // Zod 4 converts its own schemas, so most callers need nothing else installed.
-  const zod = await optionalImport<{ toJSONSchema?: (s: unknown) => Record<string, unknown> }>(
-    'zod',
-  );
-  if (zod && typeof zod.toJSONSchema === 'function') return zod.toJSONSchema(schema);
+  const converter = await zodConverter(zodVersion);
+  let converted: Record<string, unknown>;
+  try {
+    converted = converter(schema);
+  } catch (cause) {
+    throw new HydrafetchError({
+      code: 'SCHEMA_CONVERSION_FAILED',
+      message: `The Zod schema could not be converted: ${(cause as Error)?.message ?? cause}`,
+      status: 0,
+    });
+  }
+
+  // A model that refers to itself has no finite JSON Schema, and Zod describes it with a $ref
+  // rather than refusing. Nothing downstream resolves that, so sending it would fail somewhere the
+  // caller cannot see. Say it here instead.
+  if (JSON.stringify(converted).includes('"$ref":"#')) {
+    throw new HydrafetchError({
+      code: 'SCHEMA_CONVERSION_FAILED',
+      message:
+        'The Zod schema refers to itself, so it cannot be expressed as a flat JSON Schema. ' +
+        'Flatten the schema or pass JSON Schema directly.',
+      status: 0,
+    });
+  }
+
+  return converted;
+}
+
+/**
+ * Which Zod wrote this schema, or null if Zod did not.
+ *
+ * The installed Zod and the Zod that built the schema are separate facts. A workspace can resolve
+ * both majors at once, and handing a v3 schema to v4's converter throws from inside Zod with a
+ * message about `_zod.def` that tells the caller nothing. The schema carries its own version, so
+ * ask it rather than the package.
+ */
+function zodMajorOf(schema: ExtractSchema): 3 | 4 | null {
+  if (typeof schema !== 'object' || schema === null) return null;
+  if (typeof (schema as ZodLike).parse !== 'function') return null;
+  if ('_zod' in schema) return 4;
+  return '_def' in schema ? 3 : null;
+}
+
+async function zodConverter(
+  version: 3 | 4,
+): Promise<(schema: ExtractSchema) => Record<string, unknown>> {
+  if (version === 4) {
+    // Zod 4 converts its own schemas, so a v4 caller needs nothing else installed.
+    const zod = await optionalImport<{ toJSONSchema?: (s: unknown) => Record<string, unknown> }>(
+      'zod',
+    );
+    if (zod && typeof zod.toJSONSchema === 'function') return zod.toJSONSchema;
+  }
 
   // Zod 3 has no converter of its own and is still widely used, so honour the package everyone
-  // reaches for rather than refusing a schema we could convert.
+  // reaches for rather than refusing a schema we could have converted.
   const legacy = await optionalImport<{
-    zodToJsonSchema?: (s: unknown) => Record<string, unknown>;
+    zodToJsonSchema?: (s: unknown, o?: Record<string, unknown>) => Record<string, unknown>;
   }>('zod-to-json-schema');
-  if (legacy && typeof legacy.zodToJsonSchema === 'function') return legacy.zodToJsonSchema(schema);
+  // Reusing one sub-schema twice is ordinary, and by default it is described the second time as a
+  // $ref pointing into the first. That indirection does not survive the trip to a model's tool
+  // schema, so the second field would come back empty for a reason invisible from the caller's
+  // side. Zod 4 already inlines; ask Zod 3 to do the same.
+  if (legacy && typeof legacy.zodToJsonSchema === 'function') {
+    return (schema) => legacy.zodToJsonSchema!(schema, { $refStrategy: 'none' });
+  }
 
   throw new HydrafetchError({
     code: 'SCHEMA_CONVERSION_FAILED',
     message:
-      'A Zod schema was passed but nothing here can convert it. Use zod 4, which converts its ' +
-      'own schemas, or install zod-to-json-schema alongside zod 3, or pass a JSON Schema.',
+      `A Zod ${version} schema was passed but nothing here can convert it. Use zod 4, which ` +
+      'converts its own schemas, or install zod-to-json-schema alongside zod 3, or pass a JSON ' +
+      'Schema.',
     status: 0,
   });
 }

@@ -229,6 +229,32 @@ describe('extract schemas', () => {
     expect(sent.properties.price.description).toBe("the price of this page's product");
   });
 
+  it('inlines a sub-schema used twice rather than pointing at the first one', async () => {
+    const zod = await import('zod').catch(() => null);
+    if (!zod) return;
+    const fetchImpl = mockFetch(() => jsonResponse({ success: true, data: [] }));
+    const address = zod.z.object({ city: zod.z.string() });
+
+    await clientWith(fetchImpl).extract('https://example.com', {
+      schema: zod.z.object({ home: address, work: address }),
+    });
+
+    expect(JSON.stringify(bodyOf(fetchImpl).schema)).not.toContain('$ref');
+  });
+
+  it('refuses a self-referential schema instead of sending an unresolvable ref', async () => {
+    const zod = await import('zod').catch(() => null);
+    if (!zod) return;
+    const fetchImpl = mockFetch(() => jsonResponse({ success: true, data: [] }));
+    const node: unknown = zod.z.object({
+      child: zod.z.lazy(() => node as never).optional(),
+    });
+
+    await expect(
+      clientWith(fetchImpl).extract("https://example.com", { schema: node as never }),
+    ).rejects.toMatchObject({ code: 'SCHEMA_CONVERSION_FAILED' });
+  });
+
   it('omits schema entirely when none was given', async () => {
     const fetchImpl = mockFetch(() => jsonResponse({ success: true, data: [] }));
     await clientWith(fetchImpl).extract('https://example.com', {});

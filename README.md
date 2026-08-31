@@ -88,7 +88,11 @@ If you already use Zod, pass the schema directly. Zod stays optional and is impo
 pass one, so this package still installs with no dependencies of its own.
 
 Zod 4 converts its own schemas and needs nothing else. On Zod 3, install `zod-to-json-schema`
-alongside it and that is used instead.
+alongside it and that is used instead. Which one is used is decided by the schema you pass, not by
+what is installed, so a workspace holding both majors still works.
+
+Nested schemas are flattened before sending, including one reused in two places. A schema that
+refers to itself cannot be flattened and is refused rather than sent.
 
 ```ts
 import { z } from 'zod';

@@ -54,10 +54,14 @@
     "access": "public"
   },
   "peerDependencies": {
-    "zod": ">=4"
+    "zod": ">=3",
+    "zod-to-json-schema": ">=3"
   },
   "peerDependenciesMeta": {
     "zod": {
+      "optional": true
+    },
+    "zod-to-json-schema": {
       "optional": true
     }
   }
