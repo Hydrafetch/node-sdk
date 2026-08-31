@@ -194,3 +194,44 @@ describe('jobs', () => {
     ).rejects.toBeInstanceOf(HydrafetchTimeoutError);
   });
 });
+
+describe('extract schemas', () => {
+  // Zod is not a dependency and is imported only when someone actually passes a Zod schema. The
+  // reason to pass one is `.describe()`: a field description reaches the model doing the
+  // extraction, and on a page carrying several products it is what says which one you meant.
+  it('sends a plain JSON Schema through untouched', async () => {
+    const fetchImpl = mockFetch(() => jsonResponse({ success: true, data: [] }));
+    const schema = {
+      type: 'object',
+      properties: { price: { type: 'string', description: "the price of this page's product" } },
+    };
+
+    await clientWith(fetchImpl).extract('https://example.com', { schema });
+
+    expect(bodyOf(fetchImpl).schema).toEqual(schema);
+  });
+
+  it('keeps descriptions when converting a zod schema', async () => {
+    const zod = await import('zod').catch(() => null);
+    if (!zod) return; // optional peer, nothing to assert when absent
+    const fetchImpl = mockFetch(() => jsonResponse({ success: true, data: [] }));
+    const schema = zod.z.object({
+      price: zod.z.string().describe("the price of this page's product"),
+    });
+
+    await clientWith(fetchImpl).extract('https://example.com', { schema });
+
+    const sent = bodyOf(fetchImpl).schema as {
+      type: string;
+      properties: { price: { description: string } };
+    };
+    expect(sent.type).toBe('object');
+    expect(sent.properties.price.description).toBe("the price of this page's product");
+  });
+
+  it('omits schema entirely when none was given', async () => {
+    const fetchImpl = mockFetch(() => jsonResponse({ success: true, data: [] }));
+    await clientWith(fetchImpl).extract('https://example.com', {});
+    expect(bodyOf(fetchImpl)).not.toHaveProperty('schema');
+  });
+});

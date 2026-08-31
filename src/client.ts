@@ -1,5 +1,7 @@
 import { HydrafetchError, HydrafetchTimeoutError } from './errors.js';
 import type {
+  ExtractSchema,
+  ZodLike,
   BatchOptions,
   BrandOptions,
   BrandResult,
@@ -43,6 +45,43 @@ interface Envelope<T> {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Hand the API a JSON Schema, whatever the caller had.
+ *
+ * Zod is not a dependency and is imported only when a Zod schema is actually passed, so the
+ * package still installs with none. Zod 4 converts its own schemas; on Zod 3 the caller is told to
+ * convert it themselves rather than us guessing at a shape we cannot read.
+ */
+async function toJsonSchema(schema: ExtractSchema): Promise<Record<string, unknown>> {
+  const looksZod =
+    typeof schema === 'object' &&
+    schema !== null &&
+    ('_zod' in schema || '_def' in schema) &&
+    typeof (schema as ZodLike).parse === 'function';
+  if (!looksZod) return schema as Record<string, unknown>;
+
+  let zod: { toJSONSchema?: (s: unknown) => Record<string, unknown> };
+  try {
+    zod = (await import(/* @vite-ignore */ 'zod' as string)) as typeof zod;
+  } catch {
+    throw new HydrafetchError({
+      code: 'SCHEMA_CONVERSION_FAILED',
+      message: 'A Zod schema was passed but zod is not installed. Install zod, or pass a JSON Schema.',
+      status: 0,
+    });
+  }
+  if (typeof zod.toJSONSchema !== 'function') {
+    throw new HydrafetchError({
+      code: 'SCHEMA_CONVERSION_FAILED',
+      message:
+        'Converting a Zod schema needs zod 4 or later. Upgrade zod, or pass a JSON Schema, for ' +
+        'example with the zod-to-json-schema package.',
+      status: 0,
+    });
+  }
+  return zod.toJSONSchema(schema);
 }
 
 export class Hydrafetch {
@@ -169,13 +208,15 @@ export class Hydrafetch {
     return this.request<SearchResult>('POST', '/v1/web/search', { query, ...options });
   }
 
-  extract<T = unknown>(
+  async extract<T = unknown>(
     urls: string | string[],
     options: ExtractOptions = {},
   ): Promise<ExtractResult<T>> {
+    const { schema, ...rest } = options;
     return this.request<ExtractResult<T>>('POST', '/v1/web/extract', {
       urls: Array.isArray(urls) ? urls : [urls],
-      ...options,
+      ...rest,
+      ...(schema === undefined ? {} : { schema: await toJsonSchema(schema) }),
     });
   }
 

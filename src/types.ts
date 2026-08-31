@@ -109,8 +109,25 @@ export interface SearchResult {
   results: SearchResultItem[];
 }
 
+/**
+ * A standards-compliant JSON Schema, or a Zod schema you already have.
+ *
+ * Zod is not a dependency of this package and never will be: it is loaded only if you actually
+ * pass one. The reason to pass one is `.describe()`. A field description reaches the model that
+ * does the extraction, and on a page carrying several products or several dates it is what tells
+ * the model which one you meant.
+ */
+export type ExtractSchema = Record<string, unknown> | ZodLike;
+
+/** Structurally a Zod schema, without importing Zod to say so. */
+export interface ZodLike {
+  _zod?: unknown;
+  _def?: unknown;
+  parse?: (value: unknown) => unknown;
+}
+
 export interface ExtractOptions {
-  schema?: Record<string, unknown>;
+  schema?: ExtractSchema;
   prompt?: string;
   preferStructure?: boolean;
   enableWebSearch?: boolean;

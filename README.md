@@ -82,6 +82,28 @@ out.results.forEach((item) => console.log(item.url, item.data?.name));
 
 Pass `prompt` instead of, or alongside, `schema` to describe the fields in plain language.
 
+### Zod schemas
+
+If you already use Zod, pass the schema directly. Zod stays optional and is imported only when you
+pass one, so this package still installs with no dependencies of its own. Zod 4 or later.
+
+```ts
+import { z } from 'zod';
+
+const Product = z.object({
+  name: z.string().describe("the name of the product this page is selling, not a recommended one"),
+  priceUsd: z.number().describe('its current price in US dollars'),
+});
+
+const out = await hf.extract<z.infer<typeof Product>>(['https://example.com/product/1'], {
+  schema: Product,
+});
+```
+
+`.describe()` is the reason to bother. The description travels with the field to the model doing the
+extraction, and on a page carrying several products, several dates or several addresses it is what
+tells the model which one you meant. The same works in a plain JSON Schema with `description`.
+
 ## Discovery and bulk work
 
 `map` lists a site's URLs for one credit without fetching any page.
