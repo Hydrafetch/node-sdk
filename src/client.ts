@@ -51,8 +51,9 @@ function sleep(ms: number): Promise<void> {
  * Hand the API a JSON Schema, whatever the caller had.
  *
  * Zod is not a dependency and is imported only when a Zod schema is actually passed, so the
- * package still installs with none. Zod 4 converts its own schemas; on Zod 3 the caller is told to
- * convert it themselves rather than us guessing at a shape we cannot read.
+ * package still installs with none. Zod 4 converts its own schemas, so most callers need nothing
+ * else. Zod 3 has no converter and is still widely used, so zod-to-json-schema is honoured when it
+ * is present rather than refusing a schema we could have converted.
  */
 async function toJsonSchema(schema: ExtractSchema): Promise<Record<string, unknown>> {
   const looksZod =
@@ -62,26 +63,35 @@ async function toJsonSchema(schema: ExtractSchema): Promise<Record<string, unkno
     typeof (schema as ZodLike).parse === 'function';
   if (!looksZod) return schema as Record<string, unknown>;
 
-  let zod: { toJSONSchema?: (s: unknown) => Record<string, unknown> };
+  // Zod 4 converts its own schemas, so most callers need nothing else installed.
+  const zod = await optionalImport<{ toJSONSchema?: (s: unknown) => Record<string, unknown> }>(
+    'zod',
+  );
+  if (zod && typeof zod.toJSONSchema === 'function') return zod.toJSONSchema(schema);
+
+  // Zod 3 has no converter of its own and is still widely used, so honour the package everyone
+  // reaches for rather than refusing a schema we could convert.
+  const legacy = await optionalImport<{
+    zodToJsonSchema?: (s: unknown) => Record<string, unknown>;
+  }>('zod-to-json-schema');
+  if (legacy && typeof legacy.zodToJsonSchema === 'function') return legacy.zodToJsonSchema(schema);
+
+  throw new HydrafetchError({
+    code: 'SCHEMA_CONVERSION_FAILED',
+    message:
+      'A Zod schema was passed but nothing here can convert it. Use zod 4, which converts its ' +
+      'own schemas, or install zod-to-json-schema alongside zod 3, or pass a JSON Schema.',
+    status: 0,
+  });
+}
+
+/** Import a package the caller may not have, without making it a dependency of this one. */
+async function optionalImport<T>(name: string): Promise<T | null> {
   try {
-    zod = (await import(/* @vite-ignore */ 'zod' as string)) as typeof zod;
+    return (await import(/* @vite-ignore */ name)) as T;
   } catch {
-    throw new HydrafetchError({
-      code: 'SCHEMA_CONVERSION_FAILED',
-      message: 'A Zod schema was passed but zod is not installed. Install zod, or pass a JSON Schema.',
-      status: 0,
-    });
+    return null;
   }
-  if (typeof zod.toJSONSchema !== 'function') {
-    throw new HydrafetchError({
-      code: 'SCHEMA_CONVERSION_FAILED',
-      message:
-        'Converting a Zod schema needs zod 4 or later. Upgrade zod, or pass a JSON Schema, for ' +
-        'example with the zod-to-json-schema package.',
-      status: 0,
-    });
-  }
-  return zod.toJSONSchema(schema);
 }
 
 export class Hydrafetch {

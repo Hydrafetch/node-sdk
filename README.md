@@ -85,7 +85,10 @@ Pass `prompt` instead of, or alongside, `schema` to describe the fields in plain
 ### Zod schemas
 
 If you already use Zod, pass the schema directly. Zod stays optional and is imported only when you
-pass one, so this package still installs with no dependencies of its own. Zod 4 or later.
+pass one, so this package still installs with no dependencies of its own.
+
+Zod 4 converts its own schemas and needs nothing else. On Zod 3, install `zod-to-json-schema`
+alongside it and that is used instead.
 
 ```ts
 import { z } from 'zod';
