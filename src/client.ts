@@ -20,6 +20,7 @@ import type {
   ScreenshotResult,
   SearchOptions,
   SearchResult,
+  StyleguideOptions,
   StyleguideResult,
   WaitOptions,
 } from './types.js';
@@ -288,8 +289,12 @@ export class Hydrafetch {
     return this.request<LogoResult>('GET', '/v1/web/brand/logo', undefined, { domain, ...options });
   }
 
-  styleguide(domain: string): Promise<StyleguideResult> {
-    return this.request<StyleguideResult>('GET', '/v1/web/styleguide', undefined, { domain });
+  styleguide(domainOrUrl: string, options: StyleguideOptions = {}): Promise<StyleguideResult> {
+    const target = /^https?:\/\//i.test(domainOrUrl) ? { url: domainOrUrl } : { domain: domainOrUrl };
+    return this.request<StyleguideResult>('GET', '/v1/web/styleguide', undefined, {
+      ...target,
+      ...options,
+    });
   }
 
   screenshot(url: string, options: ScreenshotOptions = {}): Promise<ScreenshotResult> {

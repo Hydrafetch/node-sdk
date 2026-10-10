@@ -162,6 +162,7 @@ results.forEach((r) => console.log(r.title, r.url, r.data?.markdown));
 await hf.brand('stripe.com');                                 // logos, colours, fonts, socials
 await hf.logo('stripe.com', { theme: 'dark', type: 'icon' }); // one asset
 await hf.styleguide('stripe.com');                            // computed design system
+await hf.styleguide('https://stripe.com/pricing', { maxAge: 0 }); // one page, read fresh
 ```
 
 For logos in a browser use [`@hydrafetch/client-sdk`](https://github.com/Hydrafetch/client-sdk) or [`@hydrafetch/react`](https://github.com/Hydrafetch/react-sdk) with a publishable key. Those bill against logo pulls rather than credits.
@@ -225,7 +226,7 @@ const hf = new Hydrafetch({
 | `extract(urls, options?)` | `ExtractResult<T>` | 5 per URL |
 | `brand(domain)` | `BrandResult` | 5 |
 | `logo(domain, options?)` | `LogoResult` | 1 |
-| `styleguide(domain)` | `StyleguideResult` | 10 |
+| `styleguide(domainOrUrl, options?)` | `StyleguideResult` | 10 |
 | `screenshot(url, options?)` | `ScreenshotResult` | 5 |
 | `images(url)` | `ImagesResult` | 1 |
 | `links(url, options?)` | `ScrapeResult<'links'>` | 1 |

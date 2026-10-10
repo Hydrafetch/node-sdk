@@ -90,6 +90,18 @@ describe('request shaping', () => {
     expect(url).toContain('theme=dark');
     expect(init.body).toBeUndefined();
   });
+
+  it('reads a styleguide for a domain or for one page, fresh when asked', async () => {
+    const fetchImpl = mockFetch(() => jsonResponse({ success: true, data: {} }));
+    const hf = clientWith(fetchImpl);
+    await hf.styleguide('stripe.com');
+    await hf.styleguide('https://stripe.com/pricing', { maxAge: 0 });
+    expect(callAt(fetchImpl, 0).url).toContain('domain=stripe.com');
+    const page = callAt(fetchImpl, 1).url;
+    expect(page).toContain('url=https%3A%2F%2Fstripe.com%2Fpricing');
+    expect(page).toContain('maxAge=0');
+    expect(page).not.toContain('domain=');
+  });
 });
 
 describe('errors', () => {

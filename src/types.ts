@@ -214,8 +214,13 @@ export interface LogoResult {
   [key: string]: unknown;
 }
 
+export interface StyleguideOptions {
+  maxAge?: number;
+}
+
 export interface StyleguideResult {
   domain?: string;
+  page?: string;
   colors?: Record<string, unknown>;
   typography?: Record<string, unknown>;
   [key: string]: unknown;
