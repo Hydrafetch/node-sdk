@@ -82,6 +82,16 @@ out.results.forEach((item) => console.log(item.url, item.data?.name));
 
 Pass `prompt` instead of, or alongside, `schema` to describe the fields in plain language.
 
+Sites that price or stock by delivery area serve a different page for each area. Pass `location` to fetch as if from a country and language, and `headers` to send the cookie that picks the store or area, the same options `scrape` takes.
+
+```ts
+const out = await hf.extract(['https://shop.example/search?q=ghee'], {
+  prompt: 'every product with its size and price',
+  location: { country: 'in' },
+  headers: { Cookie: 'store_id=42' },
+});
+```
+
 ### Zod schemas
 
 If you already use Zod, pass the schema directly. Zod stays optional and is imported only when you

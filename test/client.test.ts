@@ -82,6 +82,18 @@ describe('request shaping', () => {
     expect(body.urls).toEqual(['https://example.com']);
   });
 
+  it('fetches extract pages with the caller location and headers', async () => {
+    const fetchImpl = mockFetch(() => jsonResponse({ success: true, data: {} }));
+    await clientWith(fetchImpl).extract('https://shop.example/s?q=ghee', {
+      prompt: 'products and prices',
+      location: { country: 'in', languages: ['en-IN'] },
+      headers: { Cookie: 'store_id=42' },
+    });
+    const body = bodyOf(fetchImpl);
+    expect(body.location).toEqual({ country: 'in', languages: ['en-IN'] });
+    expect(body.headers).toEqual({ Cookie: 'store_id=42' });
+  });
+
   it('sends GET query parameters rather than a body for brand lookups', async () => {
     const fetchImpl = mockFetch(() => jsonResponse({ success: true, data: {} }));
     await clientWith(fetchImpl).logo('stripe.com', { theme: 'dark' });

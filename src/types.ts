@@ -47,6 +47,11 @@ export interface ScrapeBase {
 export type ScrapeResult<F extends Format = 'markdown'> = ScrapeBase &
   { [K in F]: ScrapeContent[K] } & Partial<Omit<ScrapeContent, F>>;
 
+export interface Location {
+  country?: string;
+  languages?: string[];
+}
+
 export interface ScrapeOptions<F extends readonly Format[] = readonly Format[]> {
   formats?: F;
   maxAge?: number;
@@ -61,6 +66,7 @@ export interface ScrapeOptions<F extends readonly Format[] = readonly Format[]> 
   includeLinks?: boolean;
   waitFor?: number;
   timeout?: number;
+  location?: Location;
   headers?: Record<string, string>;
   jsonOptions?: Record<string, unknown>;
 }
@@ -135,6 +141,8 @@ export interface ExtractOptions {
   showConfidence?: boolean;
   mergeEntities?: boolean;
   maxAge?: number;
+  location?: Location;
+  headers?: Record<string, string>;
 }
 
 export interface ExtractItem<T = unknown> {
