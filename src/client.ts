@@ -160,7 +160,7 @@ export class Hydrafetch {
       throw new HydrafetchError({
         code: 'MISSING_API_KEY',
         message:
-          'No API key. Pass one to the constructor or set HYDRAFETCH_API_KEY. Create a key at https://app.hydrafetch.com.',
+          'No API key. Pass one to the constructor or set HYDRAFETCH_API_KEY. Copy your key from https://app.hydrafetch.com.',
         status: 401,
       });
     }

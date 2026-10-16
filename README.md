@@ -25,7 +25,7 @@ const page = await hf.scrape('https://example.com/article');
 console.log(page.markdown);
 ```
 
-Create a key at [app.hydrafetch.com](https://app.hydrafetch.com). The constructor reads `HYDRAFETCH_API_KEY` when no key is passed.
+Copy your key from [app.hydrafetch.com](https://app.hydrafetch.com). The constructor reads `HYDRAFETCH_API_KEY` when no key is passed.
 
 ## Scraping
 
