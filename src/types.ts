@@ -271,3 +271,28 @@ export interface WaitOptions {
   pollIntervalMs?: number;
   onProgress?: (job: JobResult) => void;
 }
+
+export type ResultRating = 'good' | 'bad';
+
+export type ResultFeedbackReason =
+  | 'missing_content'
+  | 'wrong_content'
+  | 'blocked'
+  | 'slow'
+  | 'formatting'
+  | 'other';
+
+export interface RateResultInput {
+  requestId?: string;
+  url?: string;
+  rating: ResultRating;
+  reasons?: ResultFeedbackReason[];
+  note?: string;
+}
+
+export interface RateResultResponse {
+  id: string;
+  requestId: string;
+  rating: ResultRating;
+}
+

@@ -1,19 +1,20 @@
 import { HydrafetchError, HydrafetchTimeoutError } from './errors.js';
 import type {
-  ExtractSchema,
-  ZodLike,
   BatchOptions,
   BrandOptions,
   BrandResult,
   CrawlOptions,
   ExtractOptions,
   ExtractResult,
+  ExtractSchema,
   Format,
   ImagesResult,
   JobResult,
   LogoResult,
   MapOptions,
   MapResult,
+  RateResultInput,
+  RateResultResponse,
   ScrapeOptions,
   ScrapeResult,
   ScreenshotOptions,
@@ -23,6 +24,7 @@ import type {
   StyleguideOptions,
   StyleguideResult,
   WaitOptions,
+  ZodLike,
 } from './types.js';
 
 const DEFAULT_BASE_URL = 'https://api.hydrafetch.com';
@@ -151,6 +153,11 @@ export class Hydrafetch {
   private readonly timeoutMs: number;
   private readonly maxRetries: number;
   private readonly fetchImpl: typeof globalThis.fetch;
+  private latestRequestId: string | undefined;
+
+  get lastRequestId(): string | undefined {
+    return this.latestRequestId;
+  }
 
   constructor(options: HydrafetchOptions | string = {}) {
     const opts = typeof options === 'string' ? { apiKey: options } : options;
@@ -206,6 +213,7 @@ export class Hydrafetch {
           signal: controller.signal,
         });
 
+        this.latestRequestId = res.headers.get('x-request-id') ?? this.latestRequestId;
         const text = await res.text();
         let parsed: Envelope<T> | undefined;
         try {
@@ -259,6 +267,10 @@ export class Hydrafetch {
   async markdown(url: string, options: Omit<ScrapeOptions, 'formats'> = {}): Promise<string> {
     const page = await this.scrape(url, { ...options, formats: ['markdown'] });
     return page.markdown;
+  }
+
+  rateResult(input: RateResultInput): Promise<RateResultResponse> {
+    return this.request<RateResultResponse>('POST', '/v1/web/feedback', input);
   }
 
   map(url: string, options: MapOptions = {}): Promise<MapResult> {

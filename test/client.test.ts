@@ -285,3 +285,42 @@ describe('extract schemas', () => {
     expect(bodyOf(fetchImpl)).not.toHaveProperty('schema');
   });
 });
+
+describe('rateResult', () => {
+  it('posts a rating for the last request and keeps that request id', async () => {
+    const f = mockFetch((url) =>
+      url.endsWith('/v1/web/feedback')
+        ? jsonResponse({ success: true, data: { id: 'f1', requestId: 'r1', rating: 'bad' } })
+        : new Response(JSON.stringify({ success: true, data: { url: 'https://a.com', markdown: '' } }), {
+            status: 200,
+            headers: { 'content-type': 'application/json', 'x-request-id': 'r1' },
+          }),
+    );
+    const client = clientWith(f);
+    await client.scrape('https://a.com');
+    expect(client.lastRequestId).toBe('r1');
+
+    const out = await client.rateResult({
+      requestId: client.lastRequestId,
+      rating: 'bad',
+      reasons: ['missing_content'],
+      note: 'pricing table missing',
+    });
+
+    expect(out).toEqual({ id: 'f1', requestId: 'r1', rating: 'bad' });
+    expect(callAt(f, 1).url).toBe('https://api.hydrafetch.com/v1/web/feedback');
+    expect(callAt(f, 1).init.method).toBe('POST');
+    expect(bodyOf(f, 1)).toEqual({
+      requestId: 'r1',
+      rating: 'bad',
+      reasons: ['missing_content'],
+      note: 'pricing table missing',
+    });
+  });
+
+  it('can rate by the URL that was read', async () => {
+    const f = mockFetch(() => jsonResponse({ success: true, data: { id: 'f2', requestId: 'r2', rating: 'good' } }));
+    await clientWith(f).rateResult({ url: 'https://a.com', rating: 'good' });
+    expect(bodyOf(f)).toEqual({ url: 'https://a.com', rating: 'good' });
+  });
+});

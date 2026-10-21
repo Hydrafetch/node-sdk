@@ -177,6 +177,24 @@ await hf.styleguide('https://stripe.com/pricing', { maxAge: 0 }); // one page, r
 
 For logos in a browser use [`@hydrafetch/client-sdk`](https://github.com/Hydrafetch/client-sdk) or [`@hydrafetch/react`](https://github.com/Hydrafetch/react-sdk) with a publishable key. Those bill against logo pulls rather than credits.
 
+## Rating results
+
+Tell us when a result was wrong, so it gets looked at. It is free, and rating the same request again replaces the earlier rating.
+
+```ts
+const page = await hf.scrape('https://stripe.com/pricing');
+await hf.rateResult({
+  requestId: hf.lastRequestId,
+  rating: 'bad',
+  reasons: ['missing_content'],
+  note: 'The enterprise tier is missing',
+});
+
+await hf.rateResult({ url: 'https://stripe.com/pricing', rating: 'good' }); // by URL, last 24 hours
+```
+
+Reasons are `missing_content`, `wrong_content`, `blocked`, `slow`, `formatting` and `other`.
+
 ## Error handling
 
 All failures throw `HydrafetchError`, carrying the API's error code, HTTP status and request id.
@@ -245,6 +263,7 @@ const hf = new Hydrafetch({
 | `startCrawl(url, options?)` | `string` | 1 per page |
 | `startBatch(urls, options?)` | `string` | 1 per page |
 | `crawlStatus(id)`, `batchStatus(id)` | `JobResult` | free |
+| `rateResult(input)` | `RateResultResponse` | free |
 
 Failed requests are not billed. Pricing does not vary with page difficulty, so there is no render, stealth or proxy option to set.
 
