@@ -324,3 +324,29 @@ describe('rateResult', () => {
     expect(bodyOf(f)).toEqual({ url: 'https://a.com', rating: 'good' });
   });
 });
+
+describe('jobs index', () => {
+  it('searches open jobs and returns the list', async () => {
+    const job = { title: 'Data Engineer', domain: 'acme.com', board: 'greenhouse' };
+    const f = mockFetch(() => jsonResponse({ success: true, data: [job] }));
+    const jobs = await clientWith(f).searchJobs('data engineer', { location: 'Berlin', limit: 20 });
+    expect(jobs).toEqual([job]);
+    expect(callAt(f).url).toBe('https://api.hydrafetch.com/v1/web/index/jobs/search');
+    expect(bodyOf(f)).toEqual({ query: 'data engineer', location: 'Berlin', limit: 20 });
+  });
+
+  it('asks for hiring changes with one domain or many, and a Date or a string', async () => {
+    const f = mockFetch(() => jsonResponse({ success: true, data: [] }));
+    const client = clientWith(f);
+    await client.hiringChanges('stripe.com', new Date('2026-10-01T00:00:00Z'));
+    expect(callAt(f).url).toBe('https://api.hydrafetch.com/v1/web/index/jobs/changes');
+    expect(bodyOf(f)).toEqual({ domains: ['stripe.com'], since: '2026-10-01T00:00:00.000Z' });
+
+    await client.hiringChanges(['a.com', 'b.com'], '2026-10-01', { includeDescriptions: true });
+    expect(bodyOf(f, 1)).toEqual({
+      domains: ['a.com', 'b.com'],
+      since: '2026-10-01',
+      includeDescriptions: true,
+    });
+  });
+});

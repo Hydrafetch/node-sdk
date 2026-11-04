@@ -3,22 +3,26 @@ import type {
   BatchOptions,
   BrandOptions,
   BrandResult,
+  CompanyHiringChanges,
   CrawlOptions,
   ExtractOptions,
   ExtractResult,
   ExtractSchema,
   Format,
+  HiringChangesOptions,
   ImagesResult,
   JobResult,
   LogoResult,
   MapOptions,
   MapResult,
+  OpenJob,
   RateResultInput,
   RateResultResponse,
   ScrapeOptions,
   ScrapeResult,
   ScreenshotOptions,
   ScreenshotResult,
+  SearchJobsOptions,
   SearchOptions,
   SearchResult,
   StyleguideOptions,
@@ -279,6 +283,22 @@ export class Hydrafetch {
 
   search(query: string, options: SearchOptions = {}): Promise<SearchResult> {
     return this.request<SearchResult>('POST', '/v1/web/search', { query, ...options });
+  }
+
+  searchJobs(query: string, options: SearchJobsOptions = {}): Promise<OpenJob[]> {
+    return this.request<OpenJob[]>('POST', '/v1/web/index/jobs/search', { query, ...options });
+  }
+
+  hiringChanges(
+    domains: string | string[],
+    since: string | Date,
+    options: HiringChangesOptions = {},
+  ): Promise<CompanyHiringChanges[]> {
+    return this.request<CompanyHiringChanges[]>('POST', '/v1/web/index/jobs/changes', {
+      domains: Array.isArray(domains) ? domains : [domains],
+      since: since instanceof Date ? since.toISOString() : since,
+      ...options,
+    });
   }
 
   async extract<T = unknown>(

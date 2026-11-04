@@ -296,3 +296,81 @@ export interface RateResultResponse {
   rating: ResultRating;
 }
 
+
+export interface SearchJobsOptions {
+  /** A city, region or country to match, like "Berlin". */
+  location?: string;
+  /** Only jobs marked remote. */
+  remoteOnly?: boolean;
+  /** Only jobs posted in the last N days (1 to 365). */
+  postedWithinDays?: number;
+  /** Max jobs to return, 1 to 100 (default 10). Each 10 jobs returned cost 1 credit. */
+  limit?: number;
+  /** Include each job's description text when we hold it. */
+  includeDescriptions?: boolean;
+}
+
+export interface JobPay {
+  min: number | null;
+  max: number | null;
+  currency: string | null;
+  interval: string | null;
+}
+
+export interface OpenJob {
+  title: string;
+  company: string | null;
+  /** The company's website. */
+  domain: string;
+  /** The hiring platform the job is posted on. */
+  board: string;
+  department: string | null;
+  location: string | null;
+  remote: boolean | null;
+  employmentType: string | null;
+  postedAt: string | null;
+  /** When the job was first seen open. */
+  firstSeenAt: string;
+  url: string | null;
+  applyUrl: string | null;
+  pay: JobPay | null;
+  description?: string | null;
+}
+
+export interface HiringChangesOptions {
+  /** Include each opened and closed job's description text when we hold it. */
+  includeDescriptions?: boolean;
+}
+
+export interface HiringCounts {
+  open: number;
+  opened: number;
+  closed: number;
+}
+
+export interface HiringChangePosting {
+  title: string;
+  department: string | null;
+  location: string | null;
+  seniority: string;
+  board: string;
+  url: string | null;
+  postedAt: string | null;
+  firstSeenAt: string;
+  closedAt: string | null;
+  description?: string | null;
+}
+
+export interface CompanyHiringChanges {
+  domain: string;
+  company: string | null;
+  lastReadAt: string | null;
+  since: string;
+  totals: HiringCounts;
+  byDepartment: Record<string, HiringCounts>;
+  bySeniority: Record<string, HiringCounts>;
+  byLocation: Record<string, HiringCounts>;
+  opened: HiringChangePosting[];
+  closed: HiringChangePosting[];
+  truncated: boolean;
+}
