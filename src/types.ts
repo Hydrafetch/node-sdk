@@ -83,9 +83,15 @@ export interface MapOptions {
   ignoreQueryParameters?: boolean;
 }
 
+export interface MapLink {
+  url: string;
+  /** When the site's sitemap says the page last changed, or null when it does not say. */
+  lastmod: string | null;
+}
+
 export interface MapResult {
   url: string;
-  links: string[];
+  links: MapLink[];
   count: number;
   total?: number;
   truncated?: boolean;

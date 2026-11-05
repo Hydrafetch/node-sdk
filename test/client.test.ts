@@ -363,3 +363,19 @@ describe('news', () => {
     expect(bodyOf(f)).toEqual({ query: 'acme raises', timeRange: 'day', limit: 5 });
   });
 });
+
+describe('map', () => {
+  it('returns each link with its lastmod', async () => {
+    const links = [
+      { url: 'https://example.com/a', lastmod: '2026-10-20T00:00:00.000Z' },
+      { url: 'https://example.com/b', lastmod: null },
+    ];
+    const f = mockFetch(() =>
+      jsonResponse({ success: true, data: { url: 'https://example.com', links, count: 2, total: 53 } }),
+    );
+    const site = await clientWith(f).map('https://example.com');
+    expect(site.links[0]?.url).toBe('https://example.com/a');
+    expect(site.links[1]?.lastmod).toBeNull();
+    expect(callAt(f).url).toBe('https://api.hydrafetch.com/v1/web/map');
+  });
+});

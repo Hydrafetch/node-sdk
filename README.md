@@ -127,7 +127,7 @@ tells the model which one you meant. The same works in a plain JSON Schema with 
 
 ```ts
 const { links } = await hf.map('https://example.com', { limit: 1000 });
-const docs = links.filter((url) => url.includes('/docs/'));
+const docs = links.map((l) => l.url).filter((url) => url.includes('/docs/'));
 ```
 
 `batchAndWait` and `crawlAndWait` submit a job and poll until it finishes.
