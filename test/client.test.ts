@@ -350,3 +350,16 @@ describe('jobs index', () => {
     });
   });
 });
+
+describe('news', () => {
+  it('searches the news with a window and returns the articles', async () => {
+    const article = { title: 'Acme raises $10M', url: 'https://example.com/a', publishedAt: '2026-11-04T10:00:00Z' };
+    const f = mockFetch(() =>
+      jsonResponse({ success: true, data: { query: 'acme raises', status: 'ok', results: [article] } }),
+    );
+    const out = await clientWith(f).news('acme raises', { timeRange: 'day', limit: 5 });
+    expect(out.results).toEqual([article]);
+    expect(callAt(f).url).toBe('https://api.hydrafetch.com/v1/web/news');
+    expect(bodyOf(f)).toEqual({ query: 'acme raises', timeRange: 'day', limit: 5 });
+  });
+});

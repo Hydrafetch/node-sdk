@@ -15,6 +15,8 @@ import type {
   LogoResult,
   MapOptions,
   MapResult,
+  NewsOptions,
+  NewsResult,
   OpenJob,
   RateResultInput,
   RateResultResponse,
@@ -283,6 +285,10 @@ export class Hydrafetch {
 
   search(query: string, options: SearchOptions = {}): Promise<SearchResult> {
     return this.request<SearchResult>('POST', '/v1/web/search', { query, ...options });
+  }
+
+  news(query: string, options: NewsOptions = {}): Promise<NewsResult> {
+    return this.request<NewsResult>('POST', '/v1/web/news', { query, ...options });
   }
 
   searchJobs(query: string, options: SearchJobsOptions = {}): Promise<OpenJob[]> {

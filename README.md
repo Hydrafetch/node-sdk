@@ -166,6 +166,18 @@ const { results } = await hf.search('post-quantum TLS adoption', {
 results.forEach((r) => console.log(r.title, r.url, r.data?.markdown));
 ```
 
+## News
+
+Find recent news articles about anything, newest first, each with its outlet and publish time:
+
+```ts
+const { results } = await hf.news('acme raises funding', { timeRange: 'week', limit: 10 });
+
+results.forEach((a) => console.log(a.publishedAt, a.source, a.title, a.url));
+```
+
+A news search costs 1 credit, and one that finds nothing is free. Set `scrapeResults: true` to also read each article as clean data, at 1 extra credit per article.
+
 ## Jobs
 
 Search open jobs collected from company career sites and hiring platforms, by the words in the job title:
@@ -276,6 +288,7 @@ const hf = new Hydrafetch({
 | `markdown(url, options?)` | `string` | 1 |
 | `map(url, options?)` | `MapResult` | 1 |
 | `search(query, options?)` | `SearchResult` | 1 + 1 per scraped result |
+| `news(query, options?)` | `NewsResult` | 1 + 1 per article read; free when empty |
 | `searchJobs(query, options?)` | `OpenJob[]` | 1 per 10 jobs |
 | `hiringChanges(domains, since, options?)` | `CompanyHiringChanges[]` | 1 per company with jobs |
 | `extract(urls, options?)` | `ExtractResult<T>` | 5 per URL |

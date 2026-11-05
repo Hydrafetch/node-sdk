@@ -374,3 +374,42 @@ export interface CompanyHiringChanges {
   closed: HiringChangePosting[];
   truncated: boolean;
 }
+
+export type NewsTimeRange = 'hour' | 'day' | 'week' | 'month';
+
+export interface NewsOptions {
+  /** Max articles to return, 1 to 50 (default 10). */
+  limit?: number;
+  /** Only articles published within this window before now (default "week"). */
+  timeRange?: NewsTimeRange;
+  /** ISO 3166 alpha-2 country code to lean results toward, like "us". */
+  country?: string;
+  /** Only articles from these sites, up to 15. */
+  includeDomains?: string[];
+  /** Drop articles from these sites, up to 15. */
+  excludeDomains?: string[];
+  /** Also read each article as clean data, 1 extra credit per article read. */
+  scrapeResults?: boolean;
+  scrapeOptions?: ScrapeOptions;
+}
+
+export interface NewsArticle {
+  title: string;
+  /** The article's address on the publisher's own site. */
+  url: string;
+  /** The outlet that published it. */
+  source: string | null;
+  /** When it was published, ISO 8601. */
+  publishedAt: string;
+  snippet: string | null;
+  imageUrl: string | null;
+  /** The article read as clean data when scrapeResults is on, otherwise null. */
+  data: ScrapeResult | null;
+}
+
+export interface NewsResult {
+  query: string;
+  status: 'ok' | 'no_results';
+  /** Newest first. */
+  results: NewsArticle[];
+}
