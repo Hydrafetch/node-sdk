@@ -42,9 +42,12 @@
     "build": "tsup src/index.ts --format esm,cjs --dts --clean",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "npm run typecheck && npm run test && npm run build"
+    "prepublishOnly": "npm run typecheck && npm run test && npm run build",
+    "types:generate": "node scripts/types.mjs",
+    "types:check": "node scripts/types.mjs check"
   },
   "devDependencies": {
+    "openapi-typescript": "^7.13.0",
     "tsup": "^8.5.0",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4",

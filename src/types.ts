@@ -1,125 +1,40 @@
-export type Format =
-  | 'markdown'
-  | 'html'
-  | 'rawHtml'
-  | 'links'
-  | 'structured'
-  | 'summary'
-  | 'json'
-  | 'brand';
+import type { components, operations } from './generated/api';
 
-export interface Usage {
-  creditsUsed: number;
-  creditsRemaining: number;
-  freshness?: string;
-}
+type Schemas = components['schemas'];
+type ScrapeData = Schemas['WebScrapeDataDto'];
 
-export interface PageMetadata {
-  title?: string;
-  description?: string;
-  language?: string;
-  [key: string]: unknown;
-}
+export type Format = NonNullable<Schemas['ScrapeRequestDto']['formats']>[number];
 
-export interface ScrapeContent {
-  markdown: string;
-  html: string;
-  rawHtml: string;
-  links: string[];
-  structured: unknown;
-  summary: string;
-  json: unknown;
-  brand: BrandResult;
-}
+export type Usage = Schemas['WebUsageDto'];
 
-export interface ScrapeBase {
-  url: string;
-  finalUrl?: string;
-  redirected?: boolean;
-  status?: number;
-  cached?: boolean;
-  warning?: string;
-  metadata?: PageMetadata;
-  usage?: Usage;
-  quality?: Record<string, unknown>;
-}
+export type PageMetadata = Schemas['WebScrapeMetadataDto'];
 
-export type ScrapeResult<F extends Format = 'markdown'> = ScrapeBase &
-  { [K in F]: ScrapeContent[K] } & Partial<Omit<ScrapeContent, F>>;
+export type ScrapeContent = Required<Pick<ScrapeData, Format>>;
 
-export interface Location {
-  country?: string;
-  languages?: string[];
-}
+export type ScrapeBase = Omit<ScrapeData, Format>;
 
-export interface ScrapeOptions<F extends readonly Format[] = readonly Format[]> {
-  formats?: F;
-  maxAge?: number;
-  cacheOnly?: boolean;
-  storeInCache?: boolean;
-  preferStructure?: boolean;
-  onlyMainContent?: boolean;
-  includeTags?: string[];
-  excludeTags?: string[];
-  removeBase64Images?: boolean;
-  blockAds?: boolean;
-  includeLinks?: boolean;
-  waitFor?: number;
-  timeout?: number;
-  location?: Location;
-  headers?: Record<string, string>;
-  jsonOptions?: Record<string, unknown>;
-}
+export type ScrapeResult<F extends Format = 'markdown'> = ScrapeBase & {
+  [K in F]: ScrapeContent[K];
+} & Partial<Omit<ScrapeContent, F>>;
 
-export interface MapOptions {
-  includeLinks?: boolean;
-  limit?: number;
-  search?: string;
-  sitemap?: string;
-  sitemapInclude?: string[];
-  sitemapExclude?: string[];
-  order?: string;
-  includeSubdomains?: boolean;
-  ignoreQueryParameters?: boolean;
-}
+export type Location = Schemas['LocationDto'];
 
-export interface MapLink {
-  url: string;
-  /** When the site's sitemap says the page last changed, or null when it does not say. */
-  lastmod: string | null;
-}
+export type ScrapeOptions<F extends readonly Format[] = readonly Format[]> = Omit<
+  Schemas['ScrapeRequestDto'],
+  'url' | 'formats' | 'async'
+> & { formats?: F };
 
-export interface MapResult {
-  url: string;
-  links: MapLink[];
-  count: number;
-  total?: number;
-  truncated?: boolean;
-}
+export type MapOptions = Omit<Schemas['MapRequestDto'], 'url'>;
 
-export interface SearchOptions {
-  limit?: number;
-  scrapeResults?: boolean;
-  scrapeOptions?: ScrapeOptions;
-  timeRange?: string;
-  country?: string;
-  includeDomains?: string[];
-  excludeDomains?: string[];
-}
+export type MapLink = Schemas['MapUrlEntryDto'];
 
-export interface SearchResultItem {
-  title: string;
-  url: string;
-  snippet: string;
-  rank: number;
-  data?: ScrapeResult;
-}
+export type MapResult = Schemas['MapResultDto'];
 
-export interface SearchResult {
-  query: string;
-  status?: string;
-  results: SearchResultItem[];
-}
+export type SearchOptions = Omit<Schemas['SearchRequestDto'], 'query'>;
+
+export type SearchResultItem = Schemas['SearchResultItemDto'];
+
+export type SearchResult = Schemas['SearchResultDto'];
 
 /**
  * A standards-compliant JSON Schema, or a Zod schema you already have.
@@ -138,139 +53,50 @@ export interface ZodLike {
   parse?: (value: unknown) => unknown;
 }
 
-export interface ExtractOptions {
+export type ExtractOptions = Omit<Schemas['ExtractRequestDto'], 'urls' | 'schema'> & {
   schema?: ExtractSchema;
-  prompt?: string;
-  preferStructure?: boolean;
-  enableWebSearch?: boolean;
-  showSources?: boolean;
-  showConfidence?: boolean;
-  mergeEntities?: boolean;
-  maxAge?: number;
-  location?: Location;
-  headers?: Record<string, string>;
-}
+};
 
-export interface ExtractItem<T = unknown> {
-  url: string;
-  data?: T;
-  fields?: Record<string, unknown>;
-  error?: string;
-}
+export type ExtractItem<T = unknown> = Omit<Schemas['ExtractItemResultDto'], 'data'> & {
+  data: T | null;
+};
 
-export interface ExtractResult<T = unknown> {
+export type ExtractResult<T = unknown> = Omit<Schemas['ExtractResultDto'], 'results'> & {
   results: ExtractItem<T>[];
-  sources?: unknown[];
-  collection?: { data?: T; sources?: unknown[] }[];
-}
+};
 
-export interface CrawlOptions {
-  limit?: number;
-  maxDepth?: number;
-  includePaths?: string[];
-  excludePaths?: string[];
-  allowSubdomains?: boolean;
-  webhook?: string;
-  scrapeOptions?: ScrapeOptions;
-}
+export type Webhook = Schemas['WebhookDto'];
 
-export interface BatchOptions {
-  webhook?: string;
-  scrapeOptions?: ScrapeOptions;
-}
+export type CrawlOptions = Omit<Schemas['CrawlRequestDto'], 'url'>;
 
-export type JobStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+export type BatchOptions = Omit<Schemas['BatchRequestDto'], 'urls'>;
 
-export interface JobPage {
-  url: string;
-  requestedUrl?: string;
-  status: string;
-  depth?: number;
-  error?: string;
-  errorCode?: string;
-  retryable?: boolean;
-  data?: ScrapeResult;
-}
+export type JobResult = Schemas['CrawlStatusResponseDto'];
 
-export interface JobResult {
-  id: string;
-  kind?: 'crawl' | 'batch' | string;
-  status: JobStatus | string;
-  seedUrl?: string;
-  total?: number;
-  completed?: number;
-  failed?: number;
-  creditsUsed?: number;
-  pages?: JobPage[];
-}
+export type JobStatus = JobResult['status'];
 
-export interface BrandOptions {
-  theme?: 'light' | 'dark' | 'auto';
-  type?: 'icon' | 'wordmark';
-}
+export type JobPage = Schemas['CrawlPageResultDto'];
 
-export interface BrandResult {
-  domain?: string;
-  name?: string;
-  description?: string;
-  logos?: Array<Record<string, unknown>>;
-  colors?: Array<Record<string, unknown>>;
-  fonts?: Array<Record<string, unknown>>;
-  socials?: Record<string, string>;
-  [key: string]: unknown;
-}
+export type BrandOptions = Omit<operations['brandLogo']['parameters']['query'], 'domain'>;
 
-export interface LogoResult {
-  url?: string;
-  domain?: string;
-  theme?: string;
-  type?: string;
-  [key: string]: unknown;
-}
+export type BrandResult = Schemas['WebBrandDataDto'];
 
-export interface StyleguideOptions {
-  maxAge?: number;
-}
+export type LogoResult = Schemas['LogoDescriptionDto'];
 
-export interface StyleguideResult {
-  domain?: string;
-  page?: string;
-  colors?: Record<string, unknown>;
-  typography?: Record<string, unknown>;
-  [key: string]: unknown;
-}
+export type StyleguideOptions = Omit<
+  NonNullable<operations['styleguideGet']['parameters']['query']>,
+  'domain' | 'url'
+>;
 
-export interface ScreenshotOptions {
-  fullPage?: boolean;
-  waitFor?: number;
-  timeout?: number;
-  maxAge?: number;
-  viewport?: { width: number; height: number };
-}
+export type StyleguideResult = Schemas['WebStyleguideDataDto'];
 
-export interface ScreenshotResult {
-  url: string;
-  finalUrl?: string;
-  status?: number;
-  screenshot: string;
-  screenshotType?: string;
-  width?: number;
-  height?: number;
-  cached?: boolean;
-}
+export type ScreenshotOptions = Omit<Schemas['ScreenshotRequestDto'], 'url'>;
 
-export interface PageImage {
-  src: string;
-  alt?: string;
-  width?: number;
-  height?: number;
-}
+export type ScreenshotResult = Schemas['WebScreenshotDataDto'];
 
-export interface ImagesResult {
-  url: string;
-  finalUrl?: string;
-  images: PageImage[];
-}
+export type PageImage = Schemas['WebImageDto'];
+
+export type ImagesResult = Schemas['WebImagesDataDto'];
 
 export interface WaitOptions {
   timeoutMs?: number;
@@ -278,143 +104,32 @@ export interface WaitOptions {
   onProgress?: (job: JobResult) => void;
 }
 
-export type ResultRating = 'good' | 'bad';
+export type RateResultInput = Schemas['ResultFeedbackDto'];
 
-export type ResultFeedbackReason =
-  | 'missing_content'
-  | 'wrong_content'
-  | 'blocked'
-  | 'slow'
-  | 'formatting'
-  | 'other';
+export type ResultRating = RateResultInput['rating'];
 
-export interface RateResultInput {
-  requestId?: string;
-  url?: string;
-  rating: ResultRating;
-  reasons?: ResultFeedbackReason[];
-  note?: string;
-}
+export type ResultFeedbackReason = NonNullable<RateResultInput['reasons']>[number];
 
-export interface RateResultResponse {
-  id: string;
-  requestId: string;
-  rating: ResultRating;
-}
+export type RateResultResponse = Schemas['ResultFeedbackDataDto'];
 
+export type SearchJobsOptions = Omit<Schemas['JobsIndexSearchRequestDto'], 'query'>;
 
-export interface SearchJobsOptions {
-  /** A city, region or country to match, like "Berlin". */
-  location?: string;
-  /** Only jobs marked remote. */
-  remoteOnly?: boolean;
-  /** Only jobs posted in the last N days (1 to 365). */
-  postedWithinDays?: number;
-  /** Max jobs to return, 1 to 100 (default 10). Each 10 jobs returned cost 1 credit. */
-  limit?: number;
-  /** Include each job's description text when we hold it. */
-  includeDescriptions?: boolean;
-}
+export type JobPay = Schemas['JobsIndexPayDto'];
 
-export interface JobPay {
-  min: number | null;
-  max: number | null;
-  currency: string | null;
-  interval: string | null;
-}
+export type OpenJob = Schemas['JobsIndexJobDto'];
 
-export interface OpenJob {
-  title: string;
-  company: string | null;
-  /** The company's website. */
-  domain: string;
-  /** The hiring platform the job is posted on. */
-  board: string;
-  department: string | null;
-  location: string | null;
-  remote: boolean | null;
-  employmentType: string | null;
-  postedAt: string | null;
-  /** When the job was first seen open. */
-  firstSeenAt: string;
-  url: string | null;
-  applyUrl: string | null;
-  pay: JobPay | null;
-  description?: string | null;
-}
+export type HiringChangesOptions = Omit<Schemas['JobsIndexChangesRequestDto'], 'domains' | 'since'>;
 
-export interface HiringChangesOptions {
-  /** Include each opened and closed job's description text when we hold it. */
-  includeDescriptions?: boolean;
-}
+export type HiringCounts = Schemas['JobsIndexCountsDto'];
 
-export interface HiringCounts {
-  open: number;
-  opened: number;
-  closed: number;
-}
+export type HiringChangePosting = Schemas['JobsIndexChangePostingDto'];
 
-export interface HiringChangePosting {
-  title: string;
-  department: string | null;
-  location: string | null;
-  seniority: string;
-  board: string;
-  url: string | null;
-  postedAt: string | null;
-  firstSeenAt: string;
-  closedAt: string | null;
-  description?: string | null;
-}
+export type CompanyHiringChanges = Schemas['JobsIndexCompanyChangesDto'];
 
-export interface CompanyHiringChanges {
-  domain: string;
-  company: string | null;
-  lastReadAt: string | null;
-  since: string;
-  totals: HiringCounts;
-  byDepartment: Record<string, HiringCounts>;
-  bySeniority: Record<string, HiringCounts>;
-  byLocation: Record<string, HiringCounts>;
-  opened: HiringChangePosting[];
-  closed: HiringChangePosting[];
-  truncated: boolean;
-}
+export type NewsOptions = Omit<Schemas['NewsRequestDto'], 'query'>;
 
-export type NewsTimeRange = 'hour' | 'day' | 'week' | 'month';
+export type NewsTimeRange = NonNullable<NewsOptions['timeRange']>;
 
-export interface NewsOptions {
-  /** Max articles to return, 1 to 50 (default 10). */
-  limit?: number;
-  /** Only articles published within this window before now (default "week"). */
-  timeRange?: NewsTimeRange;
-  /** ISO 3166 alpha-2 country code to lean results toward, like "us". */
-  country?: string;
-  /** Only articles from these sites, up to 15. */
-  includeDomains?: string[];
-  /** Drop articles from these sites, up to 15. */
-  excludeDomains?: string[];
-  /** Also read each article as clean data, 1 extra credit per article read. */
-  scrapeResults?: boolean;
-  scrapeOptions?: ScrapeOptions;
-}
+export type NewsArticle = Schemas['NewsResultItemDto'];
 
-export interface NewsArticle {
-  title: string;
-  /** The article's address on the publisher's own site. */
-  url: string;
-  /** The outlet that published it. */
-  source: string | null;
-  /** When it was published, ISO 8601. */
-  publishedAt: string;
-  snippet: string | null;
-  /** The article read as clean data when scrapeResults is on, otherwise null. */
-  data: ScrapeResult | null;
-}
-
-export interface NewsResult {
-  query: string;
-  status: 'ok' | 'no_results';
-  /** Newest first. */
-  results: NewsArticle[];
-}
+export type NewsResult = Schemas['NewsResultDto'];

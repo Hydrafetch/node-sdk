@@ -9,7 +9,7 @@ async function formatsNarrowTheResult() {
 
   const b = await hf.scrape('u', { formats: ['html', 'links'] });
   const html: string = b.html; // required because it was requested
-  const links: string[] = b.links;
+  const links: string[] = b.links.internal;
   const maybeMd: string | undefined = b.markdown; // not requested, so optional
 
   return [md, maybeHtml, html, links, maybeMd];
