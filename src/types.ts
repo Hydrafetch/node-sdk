@@ -408,7 +408,6 @@ export interface NewsArticle {
   /** When it was published, ISO 8601. */
   publishedAt: string;
   snippet: string | null;
-  imageUrl: string | null;
   /** The article read as clean data when scrapeResults is on, otherwise null. */
   data: ScrapeResult | null;
 }
