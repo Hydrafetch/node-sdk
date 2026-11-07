@@ -1,4 +1,24 @@
 export interface paths {
+    "/v1/web/jobs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a job
+         * @description Poll a call that answered 202. Completed jobs carry exactly the body the call returns when it answers in time; failed jobs carry the error it would have answered with. Results are kept for an hour.
+         */
+        get: operations["jobsGet"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/web/brand": {
         parameters: {
             query?: never;
@@ -94,7 +114,7 @@ export interface paths {
         put?: never;
         /**
          * Scrape a URL
-         * @description Fetch a single URL and return it in the formats you ask for. Waits up to 90 seconds for the result and answers 504 past that; set `async` to get a job id immediately instead.
+         * @description Fetch a single URL and return it in the formats you ask for. Waits up to 90 seconds (or your `timeout`) for the result; past that it answers 202 with a job id to poll at /v1/web/jobs/{id}, and the work carries on for up to 300 seconds. Set `async` to get the job id immediately.
          */
         post: operations["scrape"];
         delete?: never;
@@ -294,7 +314,7 @@ export interface paths {
         put?: never;
         /**
          * Map a site
-         * @description Quickly enumerate a site's URLs without scraping them. Returns synchronously and costs one credit.
+         * @description Quickly enumerate a site's URLs without scraping them. Costs one credit.
          */
         post: operations["crawlMapUrls"];
         delete?: never;
@@ -547,6 +567,31 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        CallJobErrorDto: {
+            /** @example SERVICE_UNAVAILABLE */
+            code: string;
+            /** @example The origin served an anti-bot challenge rather than the page; retryable. */
+            message: string;
+            /**
+             * @description The HTTP status the call would have answered with.
+             * @example 503
+             */
+            status: number;
+            details?: {
+                [key: string]: unknown;
+            };
+        };
+        CallJobStateDto: {
+            /** @example 019f3c09-6fae-740f-9257-10c2b6af7f43 */
+            jobId: string;
+            /** @enum {string} */
+            status: "running" | "completed" | "failed";
+            /** @description When completed: exactly the body the call returns when it answers in time. */
+            result?: {
+                [key: string]: unknown;
+            };
+            error?: components["schemas"]["CallJobErrorDto"];
+        };
         BrandFieldProvenanceDto: {
             /**
              * @description `declared` the site said it in its own markup. `harvested` we processed an asset or read its CSS. `inferred` a model produced it from the page. `external` an enrichment source rather than the site.
@@ -722,6 +767,20 @@ export interface components {
         BrandResponseDto: {
             /** @description Null when the domain could not be resolved at all. Unresolved domains are free. */
             data: components["schemas"]["WebBrandDataDto"] | null;
+        };
+        CallAcceptedDto: {
+            /** @example 019f3c09-6fae-740f-9257-10c2b6af7f43 */
+            jobId: string;
+            /**
+             * @example running
+             * @enum {string}
+             */
+            status: "running";
+            /**
+             * @description Poll this path until the status is completed or failed.
+             * @example /v1/web/jobs/019f3c09-6fae-740f-9257-10c2b6af7f43
+             */
+            poll: string;
         };
         LogoDescriptionDto: {
             /** @example stripe.com */
@@ -1415,19 +1474,6 @@ export interface components {
         };
         ScrapeResponseDto: {
             data: components["schemas"]["WebScrapeDataDto"];
-        };
-        ScrapeAcceptedDto: {
-            /**
-             * @description Poll this job id at GET /v1/web/scrape/{id}.
-             * @example 019f3c09-6fae-740f-9257-10c2b6af7f43
-             */
-            jobId: string;
-            /**
-             * @description Only returned when the request asked for `async: true`.
-             * @example queued
-             * @enum {string}
-             */
-            status: "queued";
         };
         ScrapeFormatRequestDto: {
             /**
@@ -2539,6 +2585,223 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    jobsGet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The job id from the 202 answer. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallJobStateDto"];
+                };
+            };
+            /** @description The request body or query failed validation. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "VALIDATION_ERROR",
+                     *         "message": "url must be a valid URL"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The X-API-Key header is missing, malformed, or names a key that no longer exists. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "UNAUTHORIZED",
+                     *         "message": "Missing X-API-Key header. Agents: https://hydrafetch.com/auth.md"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The workspace has no credits left for this request. Nothing was charged and nothing was fetched. */
+            402: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "INSUFFICIENT_CREDITS",
+                     *         "message": "Insufficient credits"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The key is valid but the workspace may not make this request. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "WORKSPACE_BANNED",
+                     *         "message": "This workspace has been suspended and cannot make API requests."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description No such job, or the id belongs to another workspace. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Job not found"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The target site did not respond, or we could not read that page. This is a fact about that URL rather than a fault on our side, and retrying it will not change the answer. When details.retryAfterSeconds is present, asking again before then returns this same answer. Nothing was charged. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "UPSTREAM_UNREACHABLE",
+                     *         "message": "The origin did not respond to any attempt we made."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The workspace exceeded its per-minute request limit. Read the RateLimit headers, or Retry-After on this response, and retry after the window resets. */
+            429: {
+                headers: {
+                    /** @description Seconds to wait before retrying. Prefer this over a fixed backoff. */
+                    "Retry-After"?: number;
+                    /** @description Requests remaining (r) and seconds until the window resets (t). */
+                    RateLimit?: string;
+                    /** @description The quota (q) for your plan and the window it applies over (w), in seconds. */
+                    "RateLimit-Policy"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "TOO_MANY_REQUESTS",
+                     *         "message": "Rate limit exceeded for this workspace and plan."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description Unexpected server error. Nothing was charged. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "INTERNAL_SERVER_ERROR",
+                     *         "message": "Internal server error"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description A dependency needed for the requested formats is unavailable. Safe to retry. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "SERVICE_UNAVAILABLE",
+                     *         "message": "The summary and json formats are not available."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+        };
+    };
     brandGet: {
         parameters: {
             query: {
@@ -2558,6 +2821,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BrandResponseDto"];
+                };
+            };
+            /** @description Still running; poll /v1/web/jobs/{id}. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallAcceptedDto"];
                 };
             };
             /** @description The request body or query failed validation. */
@@ -2777,6 +3049,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BrandBatchResponseDto"];
+                };
+            };
+            /** @description Still running; poll /v1/web/jobs/{id}. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallAcceptedDto"];
                 };
             };
             /** @description The request body or query failed validation. */
@@ -2999,6 +3280,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BrandLogoResponseDto"];
+                };
+            };
+            /** @description Still running; poll /v1/web/jobs/{id}. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallAcceptedDto"];
                 };
             };
             /** @description The request body or query failed validation. */
@@ -3442,6 +3732,15 @@ export interface operations {
                     "application/json": components["schemas"]["StyleguideResponseDto"];
                 };
             };
+            /** @description Still running; poll /v1/web/jobs/{id}. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallAcceptedDto"];
+                };
+            };
             /** @description The request body or query failed validation. */
             400: {
                 headers: {
@@ -3661,13 +3960,13 @@ export interface operations {
                     "application/json": components["schemas"]["ScrapeResponseDto"];
                 };
             };
-            /** @description The scrape is running; poll the job id. */
-            201: {
+            /** @description Still running after the wait; poll the job id at /v1/web/jobs/{id}. */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ScrapeAcceptedDto"];
+                    "application/json": components["schemas"]["CallAcceptedDto"];
                 };
             };
             /** @description The request body or query failed validation. */
@@ -3888,12 +4187,12 @@ export interface operations {
                     "application/json": components["schemas"]["ScrapeResponseDto"];
                 };
             };
-            201: {
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ScrapeAcceptedDto"];
+                    "application/json": components["schemas"]["CallAcceptedDto"];
                 };
             };
             /** @description The request body or query failed validation. */
@@ -4114,12 +4413,12 @@ export interface operations {
                     "application/json": components["schemas"]["ScrapeResponseDto"];
                 };
             };
-            201: {
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ScrapeAcceptedDto"];
+                    "application/json": components["schemas"]["CallAcceptedDto"];
                 };
             };
             /** @description The request body or query failed validation. */
@@ -4340,12 +4639,12 @@ export interface operations {
                     "application/json": components["schemas"]["ScrapeResponseDto"];
                 };
             };
-            201: {
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ScrapeAcceptedDto"];
+                    "application/json": components["schemas"]["CallAcceptedDto"];
                 };
             };
             /** @description The request body or query failed validation. */
@@ -4566,12 +4865,12 @@ export interface operations {
                     "application/json": components["schemas"]["ScrapeResponseDto"];
                 };
             };
-            201: {
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ScrapeAcceptedDto"];
+                    "application/json": components["schemas"]["CallAcceptedDto"];
                 };
             };
             /** @description The request body or query failed validation. */
@@ -4792,12 +5091,12 @@ export interface operations {
                     "application/json": components["schemas"]["ScrapeResponseDto"];
                 };
             };
-            201: {
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ScrapeAcceptedDto"];
+                    "application/json": components["schemas"]["CallAcceptedDto"];
                 };
             };
             /** @description The request body or query failed validation. */
@@ -5235,6 +5534,15 @@ export interface operations {
                     "application/json": components["schemas"]["ImagesResponseDto"];
                 };
             };
+            /** @description Still running; poll /v1/web/jobs/{id}. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallAcceptedDto"];
+                };
+            };
             /** @description The request body or query failed validation. */
             400: {
                 headers: {
@@ -5451,6 +5759,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ScreenshotResponseDto"];
+                };
+            };
+            /** @description Still running; poll /v1/web/jobs/{id}. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallAcceptedDto"];
                 };
             };
             /** @description The request body or query failed validation. */
@@ -5893,6 +6210,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MapResponseDto"];
+                };
+            };
+            /** @description Still running; poll /v1/web/jobs/{id}. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallAcceptedDto"];
                 };
             };
             /** @description The request body or query failed validation. */
@@ -7420,6 +7746,15 @@ export interface operations {
                     "application/json": components["schemas"]["SearchResponseDto"];
                 };
             };
+            /** @description Still running; poll /v1/web/jobs/{id}. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallAcceptedDto"];
+                };
+            };
             /** @description The request body or query failed validation. */
             400: {
                 headers: {
@@ -7637,6 +7972,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobsIndexSearchResponseDto"];
+                };
+            };
+            /** @description Still running; poll /v1/web/jobs/{id}. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallAcceptedDto"];
                 };
             };
             /** @description The request body or query failed validation. */
@@ -7858,6 +8202,15 @@ export interface operations {
                     "application/json": components["schemas"]["JobsIndexChangesResponseDto"];
                 };
             };
+            /** @description Still running; poll /v1/web/jobs/{id}. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallAcceptedDto"];
+                };
+            };
             /** @description The request body or query failed validation. */
             400: {
                 headers: {
@@ -8077,6 +8430,15 @@ export interface operations {
                     "application/json": components["schemas"]["NewsResponseDto"];
                 };
             };
+            /** @description Still running; poll /v1/web/jobs/{id}. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallAcceptedDto"];
+                };
+            };
             /** @description The request body or query failed validation. */
             400: {
                 headers: {
@@ -8294,6 +8656,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ExtractResponseDto"];
+                };
+            };
+            /** @description Still running; poll /v1/web/jobs/{id}. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallAcceptedDto"];
                 };
             };
             /** @description The request body or query failed validation. */
