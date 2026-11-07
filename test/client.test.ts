@@ -379,3 +379,50 @@ describe('map', () => {
     expect(callAt(f).url).toBe('https://api.hydrafetch.com/v1/web/map');
   });
 });
+
+describe('a call that answers 202', () => {
+  const accepted = { jobId: 'j-1', status: 'running', poll: '/v1/web/jobs/j-1' };
+
+  it('polls the job and returns the result as if the call had answered directly', async () => {
+    vi.useFakeTimers();
+    let polls = 0;
+    const f = mockFetch((url) => {
+      if (url.endsWith('/v1/web/scrape')) return jsonResponse(accepted, 202);
+      polls += 1;
+      return polls < 2
+        ? jsonResponse({ jobId: 'j-1', status: 'running' })
+        : jsonResponse({
+            jobId: 'j-1',
+            status: 'completed',
+            result: { data: { url: 'https://example.com', markdown: '# Hi' } },
+          });
+    });
+    const pending = clientWith(f).scrape('https://example.com');
+    await vi.advanceTimersByTimeAsync(5_000);
+    const page = await pending;
+    vi.useRealTimers();
+
+    expect(page.markdown).toBe('# Hi');
+    expect(callAt(f, 1).url).toBe('https://api.hydrafetch.com/v1/web/jobs/j-1');
+  });
+
+  it('throws the error the job failed with', async () => {
+    vi.useFakeTimers();
+    const f = mockFetch((url) =>
+      url.endsWith('/v1/web/search')
+        ? jsonResponse(accepted, 202)
+        : jsonResponse({
+            jobId: 'j-1',
+            status: 'failed',
+            error: { code: 'SERVICE_UNAVAILABLE', message: 'walled', status: 503 },
+          }),
+    );
+    const pending = clientWith(f).search('q').catch((e: unknown) => e);
+    await vi.advanceTimersByTimeAsync(3_000);
+    const err = await pending;
+    vi.useRealTimers();
+
+    expect(err).toBeInstanceOf(HydrafetchError);
+    expect(err).toMatchObject({ code: 'SERVICE_UNAVAILABLE', status: 503 });
+  });
+});

@@ -36,6 +36,9 @@ import type {
 const DEFAULT_BASE_URL = 'https://api.hydrafetch.com';
 const DEFAULT_TIMEOUT_MS = 120_000;
 const DEFAULT_MAX_RETRIES = 2;
+const ACCEPTED = 202;
+const CALL_JOB_TIMEOUT_MS = 330_000;
+const CALL_JOB_POLL_MS = 2_000;
 
 export interface HydrafetchOptions {
   apiKey?: string;
@@ -50,6 +53,15 @@ interface Envelope<T> {
   data?: T;
   error?: { code?: string; message?: string; details?: unknown };
   meta?: { requestId?: string };
+  jobId?: string;
+  poll?: string;
+}
+
+interface CallJob {
+  jobId: string;
+  status: 'running' | 'completed' | 'failed';
+  result?: { data?: unknown };
+  error?: { code: string; message: string; status: number; details?: unknown };
 }
 
 function sleep(ms: number): Promise<void> {
@@ -242,6 +254,9 @@ export class Hydrafetch {
           continue;
         }
 
+        if (res.status === ACCEPTED && parsed?.jobId && parsed.poll) {
+          return await this.followCallJob<T>(parsed.poll);
+        }
         return (parsed?.data ?? (parsed as unknown as T)) as T;
       } catch (error) {
         if (error instanceof HydrafetchError) {
@@ -393,6 +408,29 @@ export class Hydrafetch {
 
   batchAndWait(urls: string[], options: BatchOptions = {}, wait: WaitOptions = {}): Promise<JobResult> {
     return this.startBatch(urls, options).then((id) => this.waitForJob(() => this.batchStatus(id), wait));
+  }
+
+  private async followCallJob<T>(poll: string): Promise<T> {
+    const deadline = Date.now() + CALL_JOB_TIMEOUT_MS;
+    for (;;) {
+      await sleep(CALL_JOB_POLL_MS);
+      const job = await this.request<CallJob>('GET', poll);
+      if (job.status === 'completed') return (job.result?.data ?? job.result) as T;
+      if (job.status === 'failed') {
+        throw new HydrafetchError({
+          code: job.error?.code ?? 'JOB_FAILED',
+          message: job.error?.message ?? 'The job failed.',
+          status: job.error?.status ?? 500,
+          requestId: job.jobId,
+          details: job.error?.details,
+        });
+      }
+      if (Date.now() + CALL_JOB_POLL_MS > deadline) {
+        throw new HydrafetchTimeoutError(
+          `Job ${job.jobId} did not finish within ${CALL_JOB_TIMEOUT_MS}ms; poll ${poll} for its result.`,
+        );
+      }
+    }
   }
 
   private async waitForJob(poll: () => Promise<JobResult>, wait: WaitOptions): Promise<JobResult> {
