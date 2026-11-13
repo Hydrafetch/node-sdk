@@ -592,16 +592,6 @@ export interface components {
             };
             error?: components["schemas"]["CallJobErrorDto"];
         };
-        BrandFieldProvenanceDto: {
-            /**
-             * @description `declared` the site said it in its own markup. `harvested` we processed an asset or read its CSS. `inferred` a model produced it from the page. `external` an enrichment source rather than the site.
-             * @example declared
-             * @enum {string}
-             */
-            source: "declared" | "harvested" | "inferred" | "external";
-            /** @example 0.9 */
-            confidence?: number;
-        };
         BrandNaicsSectorDto: {
             /** @example 52 */
             code: string;
@@ -727,6 +717,28 @@ export interface components {
             /** @example https://docs.stripe.com */
             docs?: string;
         };
+        BrandFieldProvenanceDto: {
+            /**
+             * @description `declared` the site said it in its own markup. `harvested` we processed an asset or read its CSS. `inferred` we worked it out rather than read it, such as a name taken from the domain. `external` an enrichment source rather than the site.
+             * @example declared
+             * @enum {string}
+             */
+            source: "declared" | "harvested" | "inferred" | "external";
+            /** @example 0.9 */
+            confidence?: number;
+        };
+        BrandAddressDto: {
+            /** @example 354 Oyster Point Blvd */
+            street: string | null;
+            /** @example South San Francisco */
+            city: string | null;
+            /** @example CA */
+            region: string | null;
+            /** @example 94080 */
+            postalCode: string | null;
+            /** @example US */
+            country: string | null;
+        };
         WebBrandDataDto: {
             /**
              * @description The canonical domain for this company.
@@ -757,6 +769,23 @@ export interface components {
             email?: string;
             /** @example Stripe, Inc. */
             legalName?: string;
+            /**
+             * @description The site's own meta description, word for word.
+             * @example Stripe powers online and in-person payment processing for businesses of all sizes.
+             */
+            metaDescription?: string;
+            /**
+             * @description A phone number the site publishes for the company.
+             * @example +1 888 926 2289
+             */
+            phone?: string;
+            /** @description The address the site publishes for the company. */
+            address?: components["schemas"]["BrandAddressDto"];
+            /**
+             * @description The year the site says the company was founded.
+             * @example 2010
+             */
+            foundedYear?: number;
             /** @description Per-field provenance, keyed by field name. Lets you tell "their markup says this" from "a model guessed this". */
             sources: {
                 [key: string]: components["schemas"]["BrandFieldProvenanceDto"];
@@ -1200,7 +1229,7 @@ export interface components {
         };
         LocationDto: {
             /**
-             * @description ISO 3166 alpha-2 country to fetch the page as if from.
+             * @description Two-letter country to read the page from: `us` or `de`. Any other country is refused with a 400 that lists the supported codes.
              * @example us
              */
             country?: string;
@@ -1260,8 +1289,14 @@ export interface components {
             excludeTags?: string[];
             /** @description Strip inline base64 images from the output. Default true. */
             removeBase64Images?: boolean;
-            /** @description Remove common ad and tracking elements. Default true. */
+            /** @description Remove ads and tracking elements. Default true. */
             blockAds?: boolean;
+            /** @description Remove cookie and consent banners. Default true. Set false to keep them; a banner the site adds with scripts after load is kept only when the page is rendered. */
+            dismissCookies?: boolean;
+            /** @description Close newsletter and promotion popups when the page is rendered. Default true. Set false to keep them. */
+            dismissPopups?: boolean;
+            /** @description Always read the page in a browser, as a visitor sees it once its scripts have run. Default false: the page is read in a browser only when its HTML is not enough. Combine with dismissCookies and dismissPopups set to false to keep what scripts add after load. */
+            render?: boolean;
             /** @description Keep inline links in the markdown. By default links are kept wherever the page text carries them. Set true to keep them on every page, or false for the densest prose. */
             includeLinks?: boolean;
             /** @description Extra milliseconds to let the page settle before capture. */
@@ -1511,8 +1546,14 @@ export interface components {
             excludeTags?: string[];
             /** @description Strip inline base64 images from the output. Default true. */
             removeBase64Images?: boolean;
-            /** @description Remove common ad and tracking elements. Default true. */
+            /** @description Remove ads and tracking elements. Default true. */
             blockAds?: boolean;
+            /** @description Remove cookie and consent banners. Default true. Set false to keep them; a banner the site adds with scripts after load is kept only when the page is rendered. */
+            dismissCookies?: boolean;
+            /** @description Close newsletter and promotion popups when the page is rendered. Default true. Set false to keep them. */
+            dismissPopups?: boolean;
+            /** @description Always read the page in a browser, as a visitor sees it once its scripts have run. Default false: the page is read in a browser only when its HTML is not enough. Combine with dismissCookies and dismissPopups set to false to keep what scripts add after load. */
+            render?: boolean;
             /** @description Keep inline links in the markdown. By default links are kept wherever the page text carries them. Set true to keep them on every page, or false for the densest prose. */
             includeLinks?: boolean;
             /** @description Extra milliseconds to let the page settle before capture. */
@@ -1623,6 +1664,10 @@ export interface components {
             viewportWidth?: number;
             /** @description Exact viewport height in pixels. Overrides `viewport`. With fullPage the capture still extends to the full page height. */
             viewportHeight?: number;
+            /** @description Accept cookie and consent banners before the capture. Default true. Set false to capture them. */
+            dismissCookies?: boolean;
+            /** @description Clear popups and overlays covering the page before the capture. Default true. Set false to capture them. */
+            dismissPopups?: boolean;
         };
         WebScreenshotDataDto: {
             /**
@@ -1799,21 +1844,6 @@ export interface components {
              */
             secret?: string;
         };
-        OptLocationDto: {
-            /**
-             * @description ISO 3166 alpha-2 country to fetch as if from.
-             * @example us
-             */
-            country?: string;
-            /**
-             * @description Preferred content languages, most-preferred first.
-             * @example [
-             *       "en-US",
-             *       "en"
-             *     ]
-             */
-            languages?: string[];
-        };
         ScrapeOptionsDto: {
             /**
              * @description What to return per page. Omit for Markdown only.
@@ -1830,15 +1860,21 @@ export interface components {
             excludeTags?: string[];
             /** @description Strip inline base64 images. Default true. */
             removeBase64Images?: boolean;
-            /** @description Remove common ad and tracking elements. Default true. */
+            /** @description Remove ads and tracking elements. Default true. */
             blockAds?: boolean;
+            /** @description Remove cookie and consent banners. Default true. Set false to keep them; a banner the site adds with scripts after load is kept only when the page is rendered. */
+            dismissCookies?: boolean;
+            /** @description Close newsletter and promotion popups when the page is rendered. Default true. Set false to keep them. */
+            dismissPopups?: boolean;
+            /** @description Always read the page in a browser, as a visitor sees it once its scripts have run. Default false: the page is read in a browser only when its HTML is not enough. Combine with dismissCookies and dismissPopups set to false to keep what scripts add after load. */
+            render?: boolean;
             /** @description Keep inline links in the markdown. By default links are kept wherever the page text carries them. Set true to keep them on every page, or false for the densest prose. */
             includeLinks?: boolean;
             /** @description Extra milliseconds to let the page settle before capture. */
             waitFor?: number;
             /** @description Per-page time budget, in milliseconds. */
             timeout?: number;
-            location?: components["schemas"]["OptLocationDto"];
+            location?: components["schemas"]["LocationDto"];
             /** @description Extra request headers to send when fetching each page. */
             headers?: {
                 [key: string]: string;
