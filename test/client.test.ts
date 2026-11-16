@@ -447,6 +447,30 @@ describe('a call that answers 202', () => {
   });
 });
 
+describe('idempotency', () => {
+  it('sends one key per call and reuses it on that call\'s retries', async () => {
+    vi.useFakeTimers();
+    let calls = 0;
+    const f = mockFetch(() => {
+      calls += 1;
+      return calls === 1
+        ? jsonResponse({ success: false, error: { message: 'busy' } }, 503)
+        : jsonResponse({ success: true, data: { markdown: 'ok' } });
+    });
+    const client = clientWith(f, { maxRetries: 2 });
+    const first = client.scrape('https://example.com');
+    await vi.advanceTimersByTimeAsync(5_000);
+    await first;
+    await client.scrape('https://example.com');
+    vi.useRealTimers();
+
+    const keys = [0, 1, 2].map((i) => headersOf(f, i)['Idempotency-Key']);
+    expect(keys[0]).toBeTruthy();
+    expect(keys[0]).toBe(keys[1]);
+    expect(keys[2]).not.toBe(keys[1]);
+  });
+});
+
 describe('retry timing', () => {
   it('waits as long as Retry-After asks before trying again', async () => {
     vi.useFakeTimers();

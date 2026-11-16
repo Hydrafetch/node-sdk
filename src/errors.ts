@@ -41,7 +41,7 @@ export class HydrafetchError extends Error {
   }
 
   get isRetryable(): boolean {
-    return this.status === 429 || this.status >= 500;
+    return this.status === 429 || this.status >= 500 || this.code === 'IDEMPOTENCY_IN_PROGRESS';
   }
 }
 

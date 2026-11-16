@@ -68,6 +68,12 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function newIdempotencyKey(): string {
+  const webCrypto = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+  if (typeof webCrypto?.randomUUID === 'function') return webCrypto.randomUUID();
+  return Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+}
+
 const MAX_RETRY_WAIT_S = 30;
 const BACKOFF_CAP_MS = 8_000;
 
@@ -236,6 +242,7 @@ export class Hydrafetch {
 
     let lastError: HydrafetchError | undefined;
     let poll: string | undefined;
+    const idempotencyKey = method === 'POST' ? newIdempotencyKey() : undefined;
     for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), this.timeoutMs);
@@ -246,6 +253,7 @@ export class Hydrafetch {
             'X-API-Key': this.apiKey,
             'content-type': 'application/json',
             accept: 'application/json',
+            ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
           },
           body: body === undefined ? undefined : JSON.stringify(body),
           signal: controller.signal,
