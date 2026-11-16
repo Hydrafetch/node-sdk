@@ -1722,7 +1722,7 @@ export interface components {
              */
             url: string;
             /**
-             * @description Also include same-site links found on the starting page, not just the site's page list.
+             * @description Also include same-site links found on the starting page, not just the site's page list. A site with no page list gets them either way.
              * @example true
              */
             includeLinks?: boolean;
@@ -2584,7 +2584,7 @@ export interface components {
              * @example INSUFFICIENT_CREDITS
              * @enum {string}
              */
-            code: "VALIDATION_ERROR" | "INVALID_INPUT" | "UNAUTHORIZED" | "INSUFFICIENT_CREDITS" | "FORBIDDEN" | "WORKSPACE_BANNED" | "NOT_FOUND" | "TOO_MANY_REQUESTS" | "UPSTREAM_UNREACHABLE" | "SERVICE_UNAVAILABLE" | "INTERNAL_SERVER_ERROR";
+            code: "VALIDATION_ERROR" | "INVALID_INPUT" | "UNAUTHORIZED" | "INSUFFICIENT_CREDITS" | "FORBIDDEN" | "WORKSPACE_BANNED" | "NOT_FOUND" | "IDEMPOTENCY_IN_PROGRESS" | "IDEMPOTENCY_KEY_REUSED" | "TOO_MANY_REQUESTS" | "UPSTREAM_UNREACHABLE" | "SERVICE_UNAVAILABLE" | "INTERNAL_SERVER_ERROR";
             /**
              * @description Human-readable explanation. Safe to show a user, not to parse.
              * @example Insufficient credits
@@ -3068,7 +3068,10 @@ export interface operations {
     brandBatch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Any unique string up to 255 visible characters. Send the same key when you retry a request: for 12 hours a repeat returns the first answer again, with an Idempotent-Replayed: true header, without doing the work or charging a second time. A repeat that arrives while the first is still running gets 409 IDEMPOTENCY_IN_PROGRESS; the same key with a different body gets 409 IDEMPOTENCY_KEY_REUSED. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -3192,6 +3195,29 @@ export interface operations {
                      *       "error": {
                      *         "code": "NOT_FOUND",
                      *         "message": "Job not found"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The Idempotency-Key on this request is still running from an earlier attempt (IDEMPOTENCY_IN_PROGRESS: wait Retry-After seconds and send it again to get the saved answer), or was already used with a different request body (IDEMPOTENCY_KEY_REUSED: use a new key). Nothing was charged. */
+            409: {
+                headers: {
+                    /** @description Seconds to wait before sending the same request again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "IDEMPOTENCY_IN_PROGRESS",
+                     *         "message": "A request with this Idempotency-Key is still running."
                      *       },
                      *       "meta": {
                      *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
@@ -3977,7 +4003,10 @@ export interface operations {
     scrape: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Any unique string up to 255 visible characters. Send the same key when you retry a request: for 12 hours a repeat returns the first answer again, with an Idempotent-Replayed: true header, without doing the work or charging a second time. A repeat that arrives while the first is still running gets 409 IDEMPOTENCY_IN_PROGRESS; the same key with a different body gets 409 IDEMPOTENCY_KEY_REUSED. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -4110,6 +4139,29 @@ export interface operations {
                     "application/json": components["schemas"]["WebError"];
                 };
             };
+            /** @description The Idempotency-Key on this request is still running from an earlier attempt (IDEMPOTENCY_IN_PROGRESS: wait Retry-After seconds and send it again to get the saved answer), or was already used with a different request body (IDEMPOTENCY_KEY_REUSED: use a new key). Nothing was charged. */
+            409: {
+                headers: {
+                    /** @description Seconds to wait before sending the same request again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "IDEMPOTENCY_IN_PROGRESS",
+                     *         "message": "A request with this Idempotency-Key is still running."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
             /** @description The target site did not respond, or we could not read that page. This is a fact about that URL rather than a fault on our side, and retrying it will not change the answer. When details.retryAfterSeconds is present, asking again before then returns this same answer. Nothing was charged. */
             422: {
                 headers: {
@@ -4205,7 +4257,10 @@ export interface operations {
     scrapeMarkdown: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Any unique string up to 255 visible characters. Send the same key when you retry a request: for 12 hours a repeat returns the first answer again, with an Idempotent-Replayed: true header, without doing the work or charging a second time. A repeat that arrives while the first is still running gets 409 IDEMPOTENCY_IN_PROGRESS; the same key with a different body gets 409 IDEMPOTENCY_KEY_REUSED. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -4327,6 +4382,29 @@ export interface operations {
                      *       "error": {
                      *         "code": "NOT_FOUND",
                      *         "message": "Job not found"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The Idempotency-Key on this request is still running from an earlier attempt (IDEMPOTENCY_IN_PROGRESS: wait Retry-After seconds and send it again to get the saved answer), or was already used with a different request body (IDEMPOTENCY_KEY_REUSED: use a new key). Nothing was charged. */
+            409: {
+                headers: {
+                    /** @description Seconds to wait before sending the same request again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "IDEMPOTENCY_IN_PROGRESS",
+                     *         "message": "A request with this Idempotency-Key is still running."
                      *       },
                      *       "meta": {
                      *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
@@ -4431,7 +4509,10 @@ export interface operations {
     scrapeHtml: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Any unique string up to 255 visible characters. Send the same key when you retry a request: for 12 hours a repeat returns the first answer again, with an Idempotent-Replayed: true header, without doing the work or charging a second time. A repeat that arrives while the first is still running gets 409 IDEMPOTENCY_IN_PROGRESS; the same key with a different body gets 409 IDEMPOTENCY_KEY_REUSED. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -4553,6 +4634,29 @@ export interface operations {
                      *       "error": {
                      *         "code": "NOT_FOUND",
                      *         "message": "Job not found"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The Idempotency-Key on this request is still running from an earlier attempt (IDEMPOTENCY_IN_PROGRESS: wait Retry-After seconds and send it again to get the saved answer), or was already used with a different request body (IDEMPOTENCY_KEY_REUSED: use a new key). Nothing was charged. */
+            409: {
+                headers: {
+                    /** @description Seconds to wait before sending the same request again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "IDEMPOTENCY_IN_PROGRESS",
+                     *         "message": "A request with this Idempotency-Key is still running."
                      *       },
                      *       "meta": {
                      *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
@@ -4657,7 +4761,10 @@ export interface operations {
     scrapeRawHtml: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Any unique string up to 255 visible characters. Send the same key when you retry a request: for 12 hours a repeat returns the first answer again, with an Idempotent-Replayed: true header, without doing the work or charging a second time. A repeat that arrives while the first is still running gets 409 IDEMPOTENCY_IN_PROGRESS; the same key with a different body gets 409 IDEMPOTENCY_KEY_REUSED. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -4779,6 +4886,29 @@ export interface operations {
                      *       "error": {
                      *         "code": "NOT_FOUND",
                      *         "message": "Job not found"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The Idempotency-Key on this request is still running from an earlier attempt (IDEMPOTENCY_IN_PROGRESS: wait Retry-After seconds and send it again to get the saved answer), or was already used with a different request body (IDEMPOTENCY_KEY_REUSED: use a new key). Nothing was charged. */
+            409: {
+                headers: {
+                    /** @description Seconds to wait before sending the same request again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "IDEMPOTENCY_IN_PROGRESS",
+                     *         "message": "A request with this Idempotency-Key is still running."
                      *       },
                      *       "meta": {
                      *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
@@ -4883,7 +5013,10 @@ export interface operations {
     scrapeLinks: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Any unique string up to 255 visible characters. Send the same key when you retry a request: for 12 hours a repeat returns the first answer again, with an Idempotent-Replayed: true header, without doing the work or charging a second time. A repeat that arrives while the first is still running gets 409 IDEMPOTENCY_IN_PROGRESS; the same key with a different body gets 409 IDEMPOTENCY_KEY_REUSED. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -5005,6 +5138,29 @@ export interface operations {
                      *       "error": {
                      *         "code": "NOT_FOUND",
                      *         "message": "Job not found"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The Idempotency-Key on this request is still running from an earlier attempt (IDEMPOTENCY_IN_PROGRESS: wait Retry-After seconds and send it again to get the saved answer), or was already used with a different request body (IDEMPOTENCY_KEY_REUSED: use a new key). Nothing was charged. */
+            409: {
+                headers: {
+                    /** @description Seconds to wait before sending the same request again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "IDEMPOTENCY_IN_PROGRESS",
+                     *         "message": "A request with this Idempotency-Key is still running."
                      *       },
                      *       "meta": {
                      *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
@@ -5109,7 +5265,10 @@ export interface operations {
     scrapeStructured: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Any unique string up to 255 visible characters. Send the same key when you retry a request: for 12 hours a repeat returns the first answer again, with an Idempotent-Replayed: true header, without doing the work or charging a second time. A repeat that arrives while the first is still running gets 409 IDEMPOTENCY_IN_PROGRESS; the same key with a different body gets 409 IDEMPOTENCY_KEY_REUSED. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -5231,6 +5390,29 @@ export interface operations {
                      *       "error": {
                      *         "code": "NOT_FOUND",
                      *         "message": "Job not found"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The Idempotency-Key on this request is still running from an earlier attempt (IDEMPOTENCY_IN_PROGRESS: wait Retry-After seconds and send it again to get the saved answer), or was already used with a different request body (IDEMPOTENCY_KEY_REUSED: use a new key). Nothing was charged. */
+            409: {
+                headers: {
+                    /** @description Seconds to wait before sending the same request again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "IDEMPOTENCY_IN_PROGRESS",
+                     *         "message": "A request with this Idempotency-Key is still running."
                      *       },
                      *       "meta": {
                      *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
@@ -5552,7 +5734,10 @@ export interface operations {
     mediaImages: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Any unique string up to 255 visible characters. Send the same key when you retry a request: for 12 hours a repeat returns the first answer again, with an Idempotent-Replayed: true header, without doing the work or charging a second time. A repeat that arrives while the first is still running gets 409 IDEMPOTENCY_IN_PROGRESS; the same key with a different body gets 409 IDEMPOTENCY_KEY_REUSED. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -5684,6 +5869,29 @@ export interface operations {
                     "application/json": components["schemas"]["WebError"];
                 };
             };
+            /** @description The Idempotency-Key on this request is still running from an earlier attempt (IDEMPOTENCY_IN_PROGRESS: wait Retry-After seconds and send it again to get the saved answer), or was already used with a different request body (IDEMPOTENCY_KEY_REUSED: use a new key). Nothing was charged. */
+            409: {
+                headers: {
+                    /** @description Seconds to wait before sending the same request again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "IDEMPOTENCY_IN_PROGRESS",
+                     *         "message": "A request with this Idempotency-Key is still running."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
             /** @description The target site did not respond, or we could not read that page. This is a fact about that URL rather than a fault on our side, and retrying it will not change the answer. When details.retryAfterSeconds is present, asking again before then returns this same answer. Nothing was charged. */
             422: {
                 headers: {
@@ -5779,7 +5987,10 @@ export interface operations {
     mediaScreenshot: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Any unique string up to 255 visible characters. Send the same key when you retry a request: for 12 hours a repeat returns the first answer again, with an Idempotent-Replayed: true header, without doing the work or charging a second time. A repeat that arrives while the first is still running gets 409 IDEMPOTENCY_IN_PROGRESS; the same key with a different body gets 409 IDEMPOTENCY_KEY_REUSED. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -5902,6 +6113,29 @@ export interface operations {
                      *       "error": {
                      *         "code": "NOT_FOUND",
                      *         "message": "Job not found"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The Idempotency-Key on this request is still running from an earlier attempt (IDEMPOTENCY_IN_PROGRESS: wait Retry-After seconds and send it again to get the saved answer), or was already used with a different request body (IDEMPOTENCY_KEY_REUSED: use a new key). Nothing was charged. */
+            409: {
+                headers: {
+                    /** @description Seconds to wait before sending the same request again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "IDEMPOTENCY_IN_PROGRESS",
+                     *         "message": "A request with this Idempotency-Key is still running."
                      *       },
                      *       "meta": {
                      *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
@@ -6229,7 +6463,10 @@ export interface operations {
     crawlMapUrls: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Any unique string up to 255 visible characters. Send the same key when you retry a request: for 12 hours a repeat returns the first answer again, with an Idempotent-Replayed: true header, without doing the work or charging a second time. A repeat that arrives while the first is still running gets 409 IDEMPOTENCY_IN_PROGRESS; the same key with a different body gets 409 IDEMPOTENCY_KEY_REUSED. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -6362,6 +6599,29 @@ export interface operations {
                     "application/json": components["schemas"]["WebError"];
                 };
             };
+            /** @description The Idempotency-Key on this request is still running from an earlier attempt (IDEMPOTENCY_IN_PROGRESS: wait Retry-After seconds and send it again to get the saved answer), or was already used with a different request body (IDEMPOTENCY_KEY_REUSED: use a new key). Nothing was charged. */
+            409: {
+                headers: {
+                    /** @description Seconds to wait before sending the same request again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "IDEMPOTENCY_IN_PROGRESS",
+                     *         "message": "A request with this Idempotency-Key is still running."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
             /** @description The target site did not respond, or we could not read that page. This is a fact about that URL rather than a fault on our side, and retrying it will not change the answer. When details.retryAfterSeconds is present, asking again before then returns this same answer. Nothing was charged. */
             422: {
                 headers: {
@@ -6457,7 +6717,10 @@ export interface operations {
     crawlStartCrawl: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Any unique string up to 255 visible characters. Send the same key when you retry a request: for 12 hours a repeat returns the first answer again, with an Idempotent-Replayed: true header, without doing the work or charging a second time. A repeat that arrives while the first is still running gets 409 IDEMPOTENCY_IN_PROGRESS; the same key with a different body gets 409 IDEMPOTENCY_KEY_REUSED. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -6581,6 +6844,29 @@ export interface operations {
                     "application/json": components["schemas"]["WebError"];
                 };
             };
+            /** @description The Idempotency-Key on this request is still running from an earlier attempt (IDEMPOTENCY_IN_PROGRESS: wait Retry-After seconds and send it again to get the saved answer), or was already used with a different request body (IDEMPOTENCY_KEY_REUSED: use a new key). Nothing was charged. */
+            409: {
+                headers: {
+                    /** @description Seconds to wait before sending the same request again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "IDEMPOTENCY_IN_PROGRESS",
+                     *         "message": "A request with this Idempotency-Key is still running."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
             /** @description The target site did not respond, or we could not read that page. This is a fact about that URL rather than a fault on our side, and retrying it will not change the answer. When details.retryAfterSeconds is present, asking again before then returns this same answer. Nothing was charged. */
             422: {
                 headers: {
@@ -6676,7 +6962,10 @@ export interface operations {
     crawlStartBatch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Any unique string up to 255 visible characters. Send the same key when you retry a request: for 12 hours a repeat returns the first answer again, with an Idempotent-Replayed: true header, without doing the work or charging a second time. A repeat that arrives while the first is still running gets 409 IDEMPOTENCY_IN_PROGRESS; the same key with a different body gets 409 IDEMPOTENCY_KEY_REUSED. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -6791,6 +7080,29 @@ export interface operations {
                      *       "error": {
                      *         "code": "NOT_FOUND",
                      *         "message": "Job not found"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The Idempotency-Key on this request is still running from an earlier attempt (IDEMPOTENCY_IN_PROGRESS: wait Retry-After seconds and send it again to get the saved answer), or was already used with a different request body (IDEMPOTENCY_KEY_REUSED: use a new key). Nothing was charged. */
+            409: {
+                headers: {
+                    /** @description Seconds to wait before sending the same request again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "IDEMPOTENCY_IN_PROGRESS",
+                     *         "message": "A request with this Idempotency-Key is still running."
                      *       },
                      *       "meta": {
                      *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
@@ -7763,7 +8075,10 @@ export interface operations {
     searchRun: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Any unique string up to 255 visible characters. Send the same key when you retry a request: for 12 hours a repeat returns the first answer again, with an Idempotent-Replayed: true header, without doing the work or charging a second time. A repeat that arrives while the first is still running gets 409 IDEMPOTENCY_IN_PROGRESS; the same key with a different body gets 409 IDEMPOTENCY_KEY_REUSED. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -7896,6 +8211,29 @@ export interface operations {
                     "application/json": components["schemas"]["WebError"];
                 };
             };
+            /** @description The Idempotency-Key on this request is still running from an earlier attempt (IDEMPOTENCY_IN_PROGRESS: wait Retry-After seconds and send it again to get the saved answer), or was already used with a different request body (IDEMPOTENCY_KEY_REUSED: use a new key). Nothing was charged. */
+            409: {
+                headers: {
+                    /** @description Seconds to wait before sending the same request again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "IDEMPOTENCY_IN_PROGRESS",
+                     *         "message": "A request with this Idempotency-Key is still running."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
             /** @description The target site did not respond, or we could not read that page. This is a fact about that URL rather than a fault on our side, and retrying it will not change the answer. When details.retryAfterSeconds is present, asking again before then returns this same answer. Nothing was charged. */
             422: {
                 headers: {
@@ -7991,7 +8329,10 @@ export interface operations {
     jobsIndexSearch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Any unique string up to 255 visible characters. Send the same key when you retry a request: for 12 hours a repeat returns the first answer again, with an Idempotent-Replayed: true header, without doing the work or charging a second time. A repeat that arrives while the first is still running gets 409 IDEMPOTENCY_IN_PROGRESS; the same key with a different body gets 409 IDEMPOTENCY_KEY_REUSED. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -8124,6 +8465,29 @@ export interface operations {
                     "application/json": components["schemas"]["WebError"];
                 };
             };
+            /** @description The Idempotency-Key on this request is still running from an earlier attempt (IDEMPOTENCY_IN_PROGRESS: wait Retry-After seconds and send it again to get the saved answer), or was already used with a different request body (IDEMPOTENCY_KEY_REUSED: use a new key). Nothing was charged. */
+            409: {
+                headers: {
+                    /** @description Seconds to wait before sending the same request again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "IDEMPOTENCY_IN_PROGRESS",
+                     *         "message": "A request with this Idempotency-Key is still running."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
             /** @description The target site did not respond, or we could not read that page. This is a fact about that URL rather than a fault on our side, and retrying it will not change the answer. When details.retryAfterSeconds is present, asking again before then returns this same answer. Nothing was charged. */
             422: {
                 headers: {
@@ -8219,7 +8583,10 @@ export interface operations {
     jobsIndexChanges: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Any unique string up to 255 visible characters. Send the same key when you retry a request: for 12 hours a repeat returns the first answer again, with an Idempotent-Replayed: true header, without doing the work or charging a second time. A repeat that arrives while the first is still running gets 409 IDEMPOTENCY_IN_PROGRESS; the same key with a different body gets 409 IDEMPOTENCY_KEY_REUSED. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -8352,6 +8719,29 @@ export interface operations {
                     "application/json": components["schemas"]["WebError"];
                 };
             };
+            /** @description The Idempotency-Key on this request is still running from an earlier attempt (IDEMPOTENCY_IN_PROGRESS: wait Retry-After seconds and send it again to get the saved answer), or was already used with a different request body (IDEMPOTENCY_KEY_REUSED: use a new key). Nothing was charged. */
+            409: {
+                headers: {
+                    /** @description Seconds to wait before sending the same request again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "IDEMPOTENCY_IN_PROGRESS",
+                     *         "message": "A request with this Idempotency-Key is still running."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
             /** @description The target site did not respond, or we could not read that page. This is a fact about that URL rather than a fault on our side, and retrying it will not change the answer. When details.retryAfterSeconds is present, asking again before then returns this same answer. Nothing was charged. */
             422: {
                 headers: {
@@ -8447,7 +8837,10 @@ export interface operations {
     newsRun: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Any unique string up to 255 visible characters. Send the same key when you retry a request: for 12 hours a repeat returns the first answer again, with an Idempotent-Replayed: true header, without doing the work or charging a second time. A repeat that arrives while the first is still running gets 409 IDEMPOTENCY_IN_PROGRESS; the same key with a different body gets 409 IDEMPOTENCY_KEY_REUSED. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -8580,6 +8973,29 @@ export interface operations {
                     "application/json": components["schemas"]["WebError"];
                 };
             };
+            /** @description The Idempotency-Key on this request is still running from an earlier attempt (IDEMPOTENCY_IN_PROGRESS: wait Retry-After seconds and send it again to get the saved answer), or was already used with a different request body (IDEMPOTENCY_KEY_REUSED: use a new key). Nothing was charged. */
+            409: {
+                headers: {
+                    /** @description Seconds to wait before sending the same request again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "IDEMPOTENCY_IN_PROGRESS",
+                     *         "message": "A request with this Idempotency-Key is still running."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
             /** @description The target site did not respond, or we could not read that page. This is a fact about that URL rather than a fault on our side, and retrying it will not change the answer. When details.retryAfterSeconds is present, asking again before then returns this same answer. Nothing was charged. */
             422: {
                 headers: {
@@ -8675,7 +9091,10 @@ export interface operations {
     extractRun: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Any unique string up to 255 visible characters. Send the same key when you retry a request: for 12 hours a repeat returns the first answer again, with an Idempotent-Replayed: true header, without doing the work or charging a second time. A repeat that arrives while the first is still running gets 409 IDEMPOTENCY_IN_PROGRESS; the same key with a different body gets 409 IDEMPOTENCY_KEY_REUSED. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -8808,6 +9227,29 @@ export interface operations {
                     "application/json": components["schemas"]["WebError"];
                 };
             };
+            /** @description The Idempotency-Key on this request is still running from an earlier attempt (IDEMPOTENCY_IN_PROGRESS: wait Retry-After seconds and send it again to get the saved answer), or was already used with a different request body (IDEMPOTENCY_KEY_REUSED: use a new key). Nothing was charged. */
+            409: {
+                headers: {
+                    /** @description Seconds to wait before sending the same request again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "IDEMPOTENCY_IN_PROGRESS",
+                     *         "message": "A request with this Idempotency-Key is still running."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
             /** @description The target site did not respond, or we could not read that page. This is a fact about that URL rather than a fault on our side, and retrying it will not change the answer. When details.retryAfterSeconds is present, asking again before then returns this same answer. Nothing was charged. */
             422: {
                 headers: {
@@ -8903,7 +9345,10 @@ export interface operations {
     resultFeedbackRateResult: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Any unique string up to 255 visible characters. Send the same key when you retry a request: for 12 hours a repeat returns the first answer again, with an Idempotent-Replayed: true header, without doing the work or charging a second time. A repeat that arrives while the first is still running gets 409 IDEMPOTENCY_IN_PROGRESS; the same key with a different body gets 409 IDEMPOTENCY_KEY_REUSED. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -9017,6 +9462,29 @@ export interface operations {
                      *       "error": {
                      *         "code": "NOT_FOUND",
                      *         "message": "Job not found"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The Idempotency-Key on this request is still running from an earlier attempt (IDEMPOTENCY_IN_PROGRESS: wait Retry-After seconds and send it again to get the saved answer), or was already used with a different request body (IDEMPOTENCY_KEY_REUSED: use a new key). Nothing was charged. */
+            409: {
+                headers: {
+                    /** @description Seconds to wait before sending the same request again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "IDEMPOTENCY_IN_PROGRESS",
+                     *         "message": "A request with this Idempotency-Key is still running."
                      *       },
                      *       "meta": {
                      *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
