@@ -68,6 +68,25 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+const MAX_RETRY_WAIT_S = 30;
+const BACKOFF_CAP_MS = 8_000;
+
+function backoffMs(attempt: number): number {
+  return Math.floor(Math.random() * Math.min(BACKOFF_CAP_MS, 500 * 2 ** attempt));
+}
+
+function retryAfterSeconds(header: string | null, details: unknown): number | undefined {
+  const fromHeader = header?.trim();
+  if (fromHeader && /^\d+$/.test(fromHeader)) return Number(fromHeader);
+  if (details && typeof details === 'object') {
+    for (const key of ['retryAfterSeconds', 'retryAfter']) {
+      const value = (details as Record<string, unknown>)[key];
+      if (typeof value === 'number' && Number.isInteger(value) && value >= 0) return value;
+    }
+  }
+  return undefined;
+}
+
 /**
  * Hand the API a JSON Schema, whatever the caller had.
  *
@@ -216,6 +235,7 @@ export class Hydrafetch {
     }
 
     let lastError: HydrafetchError | undefined;
+    let poll: string | undefined;
     for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), this.timeoutMs);
@@ -247,34 +267,34 @@ export class Hydrafetch {
             status: res.status,
             requestId: parsed?.meta?.requestId,
             details: parsed?.error?.details,
+            retryAfter: retryAfterSeconds(res.headers.get('retry-after'), parsed?.error?.details),
           });
-          if (!err.isRetryable || attempt === this.maxRetries) throw err;
+          const tooLong = err.retryAfter !== undefined && err.retryAfter > MAX_RETRY_WAIT_S;
+          if (!err.isRetryable || attempt === this.maxRetries || tooLong) throw err;
           lastError = err;
-          await sleep(2 ** attempt * 500 + Math.floor(Math.random() * 250));
+          await sleep(err.retryAfter !== undefined ? err.retryAfter * 1000 : backoffMs(attempt));
           continue;
         }
 
         if (res.status === ACCEPTED && parsed?.jobId && parsed.poll) {
-          return await this.followCallJob<T>(parsed.poll);
+          poll = parsed.poll;
+          break;
         }
         return (parsed?.data ?? (parsed as unknown as T)) as T;
       } catch (error) {
-        if (error instanceof HydrafetchError) {
-          if (!error.isRetryable || attempt === this.maxRetries) throw error;
-          lastError = error;
-          continue;
-        }
+        if (error instanceof HydrafetchError) throw error;
         if ((error as Error)?.name === 'AbortError') {
           throw new HydrafetchTimeoutError(
             `Request to ${path} exceeded ${this.timeoutMs}ms. Raise timeoutMs, or use async job endpoints for long work.`,
           );
         }
         if (attempt === this.maxRetries) throw error;
-        await sleep(2 ** attempt * 500);
+        await sleep(backoffMs(attempt));
       } finally {
         clearTimeout(timer);
       }
     }
+    if (poll) return this.followCallJob<T>(poll);
     throw lastError ?? new HydrafetchError({ code: 'UNKNOWN', message: 'Request failed', status: 500 });
   }
 

@@ -9,6 +9,7 @@ export class HydrafetchError extends Error {
   readonly status: number;
   readonly requestId?: string;
   readonly details?: unknown;
+  readonly retryAfter?: number;
 
   constructor(args: {
     code: string;
@@ -16,6 +17,7 @@ export class HydrafetchError extends Error {
     status: number;
     requestId?: string;
     details?: unknown;
+    retryAfter?: number;
   }) {
     super(args.message);
     this.name = 'HydrafetchError';
@@ -23,6 +25,7 @@ export class HydrafetchError extends Error {
     this.status = args.status;
     this.requestId = args.requestId;
     this.details = args.details;
+    this.retryAfter = args.retryAfter;
   }
 
   get isAuth(): boolean {

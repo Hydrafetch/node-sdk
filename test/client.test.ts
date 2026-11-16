@@ -425,4 +425,64 @@ describe('a call that answers 202', () => {
     expect(err).toBeInstanceOf(HydrafetchError);
     expect(err).toMatchObject({ code: 'SERVICE_UNAVAILABLE', status: 503 });
   });
+
+  it('never sends the call again when the job it started fails', async () => {
+    vi.useFakeTimers();
+    const f = mockFetch((url) =>
+      url.endsWith('/v1/web/search')
+        ? jsonResponse(accepted, 202)
+        : jsonResponse({
+            jobId: 'j-1',
+            status: 'failed',
+            error: { code: 'SERVICE_UNAVAILABLE', message: 'walled', status: 503 },
+          }),
+    );
+    const pending = clientWith(f, { maxRetries: 2 }).search('q').catch((e: unknown) => e);
+    await vi.advanceTimersByTimeAsync(10_000);
+    await pending;
+    vi.useRealTimers();
+
+    const posts = f.mock.calls.filter((c) => String(c[0]).endsWith('/v1/web/search'));
+    expect(posts).toHaveLength(1);
+  });
+});
+
+describe('retry timing', () => {
+  it('waits as long as Retry-After asks before trying again', async () => {
+    vi.useFakeTimers();
+    let calls = 0;
+    const f = mockFetch(() => {
+      calls += 1;
+      return calls === 1
+        ? new Response(JSON.stringify({ success: false, error: { message: 'slow' } }), {
+            status: 429,
+            headers: { 'content-type': 'application/json', 'retry-after': '7' },
+          })
+        : jsonResponse({ success: true, data: { markdown: 'ok' } });
+    });
+    const pending = clientWith(f, { maxRetries: 2 }).scrape('https://example.com');
+    await vi.advanceTimersByTimeAsync(6_900);
+    expect(calls).toBe(1);
+    await vi.advanceTimersByTimeAsync(200);
+    const page = await pending;
+    vi.useRealTimers();
+
+    expect(page.markdown).toBe('ok');
+    expect(calls).toBe(2);
+  });
+
+  it('gives up at once when asked to wait longer than it should block', async () => {
+    const f = mockFetch(() =>
+      jsonResponse(
+        { success: false, error: { message: 'later', details: { retryAfterSeconds: 900 } } },
+        503,
+      ),
+    );
+    const err = await clientWith(f, { maxRetries: 3 })
+      .scrape('https://example.com')
+      .catch((e: unknown) => e);
+
+    expect(err).toMatchObject({ status: 503, retryAfter: 900 });
+    expect(f).toHaveBeenCalledTimes(1);
+  });
 });
