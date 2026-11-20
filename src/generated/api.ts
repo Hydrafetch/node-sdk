@@ -571,6 +571,115 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/web/monitors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List monitors */
+        get: operations["monitorsList"];
+        put?: never;
+        /**
+         * Create a monitor
+         * @description Watch pages on a schedule and get told when they change. The first check runs within a minute and records each page; later checks report what changed. One credit per page checked. Paid plans only.
+         */
+        post: operations["monitorsCreate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/web/monitors/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a monitor
+         * @description The monitor with its latest check.
+         */
+        get: operations["monitorsGet"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete a monitor
+         * @description Stops it for good. Its history is deleted 30 days later.
+         */
+        delete: operations["monitorsRemove"];
+        options?: never;
+        head?: never;
+        /**
+         * Update a monitor
+         * @description Change its pages, schedule or webhook, or pause and resume it with `status`.
+         */
+        patch: operations["monitorsUpdate"];
+        trace?: never;
+    };
+    "/v1/web/monitors/{id}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check a monitor now
+         * @description Start a check right away, outside its schedule. One credit per page checked.
+         */
+        post: operations["monitorsRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/web/monitors/{id}/checks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List checks
+         * @description Past checks of a monitor, newest first.
+         */
+        get: operations["monitorsChecks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/web/monitors/{id}/checks/{checkId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a check
+         * @description One check with every page that changed, appeared, was removed or could not be read.
+         */
+        get: operations["monitorsCheck"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1839,7 +1948,7 @@ export interface components {
         };
         WebhookDto: {
             /**
-             * @description The URL to POST events to. Must be a public http(s) URL — private, loopback, and link-local addresses are rejected.
+             * @description The URL to POST events to. Must be a public http(s) URL; private, loopback, and link-local addresses are rejected.
              * @example https://your-app.com/hooks/hydrafetch
              */
             url: string;
@@ -2618,6 +2727,465 @@ export interface components {
         };
         ResultFeedbackResponseDto: {
             data: components["schemas"]["ResultFeedbackDataDto"];
+        };
+        MonitorPagesTargetDto: {
+            /**
+             * @description Watch a list of pages for changes to their content. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "pages";
+            /**
+             * @description The pages to watch, up to 50.
+             * @example [
+             *       "https://example.com/pricing"
+             *     ]
+             */
+            urls: string[];
+            /**
+             * @description CSS selectors. Only the content inside them is compared, the rest of the page is ignored.
+             * @example [
+             *       "#pricing",
+             *       ".plan-card"
+             *     ]
+             */
+            selector?: string[];
+            /**
+             * @description Lines to leave out before comparing. Plain text matches anywhere in a line, ignoring case; wrap a pattern in slashes for a regular expression.
+             * @example [
+             *       "Last updated",
+             *       "/^Visitors: \\d+$/"
+             *     ]
+             */
+            ignore?: string[];
+            /**
+             * @description Only alert when an added or removed line contains one of these. Plain text or a regular expression in slashes. Every change is still kept in the history.
+             * @example [
+             *       "price",
+             *       "/sold out/i"
+             *     ]
+             */
+            triggerOn?: string[];
+            /** @description How each page is read. The same options as a scrape; formats are chosen by the monitor. */
+            scrapeOptions?: components["schemas"]["ScrapeOptionsDto"];
+            /**
+             * @description What you are watching for, in plain words. Each change is checked against it and only alerts when it matches; every change is still kept in the history with the verdict. One extra credit per change checked.
+             * @example the Pro plan price drops below $50 a month
+             */
+            goal?: string;
+        };
+        MonitorSiteTargetDto: {
+            /**
+             * @description Watch a whole site for pages that appear or disappear. Each new page is read once for its title and opening lines. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "site";
+            /**
+             * @description Where the site starts.
+             * @example https://example.com/blog
+             */
+            url: string;
+            /**
+             * @description Only count pages whose path matches one of these patterns.
+             * @example [
+             *       "^/blog/.*"
+             *     ]
+             */
+            includePaths?: string[];
+            /**
+             * @description Leave out pages whose path matches one of these patterns.
+             * @example [
+             *       "^/blog/tag/.*"
+             *     ]
+             */
+            excludePaths?: string[];
+            /**
+             * @description The most pages to track. When a site has more, new pages are still found but none are reported as removed.
+             * @default 200
+             */
+            limit?: number;
+            /**
+             * @description Read each new page once for its title and opening lines, up to 20 a check, at one credit each. Off reports the address only.
+             * @default true
+             */
+            readNewPages?: boolean;
+            /**
+             * @description What you are watching for, in plain words. Each change is checked against it and only alerts when it matches; every change is still kept in the history with the verdict. One extra credit per change checked.
+             * @example new senior backend roles
+             */
+            goal?: string;
+        };
+        MonitorSearchTargetDto: {
+            /**
+             * @description What to search the web for.
+             * @example best open source vector databases
+             */
+            query: string;
+            /**
+             * @description Restrict results to a recency window relative to now.
+             * @example week
+             * @enum {string}
+             */
+            timeRange?: "day" | "week" | "month" | "year";
+            /**
+             * @description ISO 3166 alpha-2 country code to bias results toward a region.
+             * @example us
+             */
+            country?: string;
+            /**
+             * @description Only return results from these domains.
+             * @example [
+             *       "github.com",
+             *       "arxiv.org"
+             *     ]
+             */
+            includeDomains?: string[];
+            /**
+             * @description Drop results from these domains.
+             * @example [
+             *       "pinterest.com"
+             *     ]
+             */
+            excludeDomains?: string[];
+            /**
+             * @description Run a search on a schedule and report results it has never returned before. Checks at most once an hour. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "search";
+            /**
+             * @description How many top results to look at each time.
+             * @default 10
+             */
+            limit?: number;
+            /**
+             * @description What you are watching for, in plain words. Each change is checked against it and only alerts when it matches; every change is still kept in the history with the verdict. One extra credit per change checked.
+             * @example news about the company being acquired
+             */
+            goal?: string;
+        };
+        MonitorScheduleDto: {
+            /**
+             * @description How often to check. The shortest is every 15 minutes.
+             * @example 1h
+             * @enum {string}
+             */
+            every: "15m" | "30m" | "1h" | "2h" | "6h" | "12h" | "1d" | "7d";
+        };
+        MonitorWebhookDto: {
+            /**
+             * @description The URL to POST events to. Must be a public http(s) URL; private, loopback, and link-local addresses are rejected.
+             * @example https://your-app.com/hooks/hydrafetch
+             */
+            url: string;
+            /**
+             * @description Extra headers to send with each callback, e.g. for authentication.
+             * @example {
+             *       "Authorization": "Bearer your-token"
+             *     }
+             */
+            headers?: {
+                [key: string]: string;
+            };
+            /**
+             * @description A shared secret. When set, each callback carries an X-Hydrafetch-Signature header you can verify to prove the request came from us and is not a replay.
+             * @example whsec_a_long_random_string
+             */
+            secret?: string;
+            /**
+             * @description `change` fires for each page that changed, appeared, or was removed; `completed` fires once per check with the counts. Defaults to both.
+             * @example [
+             *       "change",
+             *       "completed"
+             *     ]
+             */
+            events?: ("change" | "completed")[];
+        };
+        CreateMonitorDto: {
+            /** @example Competitor pricing */
+            name: string;
+            schedule: components["schemas"]["MonitorScheduleDto"];
+            /** @description What to watch, up to 10 targets: pages, a whole site, or a search. */
+            targets: (components["schemas"]["MonitorPagesTargetDto"] | components["schemas"]["MonitorSiteTargetDto"] | components["schemas"]["MonitorSearchTargetDto"])[];
+            webhook?: components["schemas"]["MonitorWebhookDto"];
+            /**
+             * @description How many days of check history to keep.
+             * @default 30
+             */
+            retentionDays?: number;
+            /**
+             * @description Send the workspace owner a daily email listing what this monitor found. Nothing is sent on a day without changes.
+             * @default off
+             * @enum {string}
+             */
+            email?: "off" | "daily";
+        };
+        MonitorPagesTargetResponseDto: {
+            /**
+             * @description Watch a list of pages for changes to their content. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "pages";
+            /**
+             * @description The pages to watch, up to 50.
+             * @example [
+             *       "https://example.com/pricing"
+             *     ]
+             */
+            urls: string[];
+            /**
+             * @description CSS selectors. Only the content inside them is compared, the rest of the page is ignored.
+             * @example [
+             *       "#pricing",
+             *       ".plan-card"
+             *     ]
+             */
+            selector?: string[];
+            /**
+             * @description Lines to leave out before comparing. Plain text matches anywhere in a line, ignoring case; wrap a pattern in slashes for a regular expression.
+             * @example [
+             *       "Last updated",
+             *       "/^Visitors: \\d+$/"
+             *     ]
+             */
+            ignore?: string[];
+            /**
+             * @description Only alert when an added or removed line contains one of these. Plain text or a regular expression in slashes. Every change is still kept in the history.
+             * @example [
+             *       "price",
+             *       "/sold out/i"
+             *     ]
+             */
+            triggerOn?: string[];
+            /** @description How each page is read. The same options as a scrape; formats are chosen by the monitor. */
+            scrapeOptions?: components["schemas"]["ScrapeOptionsDto"];
+            /**
+             * @description What you are watching for, in plain words. Each change is checked against it and only alerts when it matches; every change is still kept in the history with the verdict. One extra credit per change checked.
+             * @example the Pro plan price drops below $50 a month
+             */
+            goal?: string;
+            /** @description Stable id of this target within the monitor. */
+            id: string;
+        };
+        MonitorSiteTargetResponseDto: {
+            /**
+             * @description Watch a whole site for pages that appear or disappear. Each new page is read once for its title and opening lines. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "site";
+            /**
+             * @description Where the site starts.
+             * @example https://example.com/blog
+             */
+            url: string;
+            /**
+             * @description Only count pages whose path matches one of these patterns.
+             * @example [
+             *       "^/blog/.*"
+             *     ]
+             */
+            includePaths?: string[];
+            /**
+             * @description Leave out pages whose path matches one of these patterns.
+             * @example [
+             *       "^/blog/tag/.*"
+             *     ]
+             */
+            excludePaths?: string[];
+            /**
+             * @description The most pages to track. When a site has more, new pages are still found but none are reported as removed.
+             * @default 200
+             */
+            limit?: number;
+            /**
+             * @description Read each new page once for its title and opening lines, up to 20 a check, at one credit each. Off reports the address only.
+             * @default true
+             */
+            readNewPages?: boolean;
+            /**
+             * @description What you are watching for, in plain words. Each change is checked against it and only alerts when it matches; every change is still kept in the history with the verdict. One extra credit per change checked.
+             * @example new senior backend roles
+             */
+            goal?: string;
+            /** @description Stable id of this target within the monitor. */
+            id: string;
+        };
+        MonitorSearchTargetResponseDto: {
+            /**
+             * @description What to search the web for.
+             * @example best open source vector databases
+             */
+            query: string;
+            /**
+             * @description Restrict results to a recency window relative to now.
+             * @example week
+             * @enum {string}
+             */
+            timeRange?: "day" | "week" | "month" | "year";
+            /**
+             * @description ISO 3166 alpha-2 country code to bias results toward a region.
+             * @example us
+             */
+            country?: string;
+            /**
+             * @description Only return results from these domains.
+             * @example [
+             *       "github.com",
+             *       "arxiv.org"
+             *     ]
+             */
+            includeDomains?: string[];
+            /**
+             * @description Drop results from these domains.
+             * @example [
+             *       "pinterest.com"
+             *     ]
+             */
+            excludeDomains?: string[];
+            /**
+             * @description Run a search on a schedule and report results it has never returned before. Checks at most once an hour. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "search";
+            /**
+             * @description How many top results to look at each time.
+             * @default 10
+             */
+            limit?: number;
+            /**
+             * @description What you are watching for, in plain words. Each change is checked against it and only alerts when it matches; every change is still kept in the history with the verdict. One extra credit per change checked.
+             * @example news about the company being acquired
+             */
+            goal?: string;
+            /** @description Stable id of this target within the monitor. */
+            id: string;
+        };
+        MonitorScheduleResponseDto: {
+            /** @enum {string} */
+            every: "15m" | "30m" | "1h" | "2h" | "6h" | "12h" | "1d" | "7d";
+        };
+        MonitorWebhookResponseDto: {
+            url: string;
+            events: ("change" | "completed")[];
+        };
+        MonitorCheckSummaryDto: {
+            id: string;
+            /** @enum {string} */
+            status: "running" | "completed" | "partial" | "failed" | "skipped_no_credits" | "skipped_overlap";
+            /** @enum {string} */
+            trigger: "scheduled" | "manual";
+            /** @description Pages this check reads. */
+            totalPages: number;
+            same: number;
+            changed: number;
+            new: number;
+            removed: number;
+            /** @description Pages we could not read this time. Never counted as a change. */
+            error: number;
+            creditsUsed: number;
+            startedAt: string;
+            finishedAt: string | null;
+        };
+        MonitorResponseDto: {
+            id: string;
+            name: string;
+            /** @enum {string} */
+            status: "active" | "paused";
+            /** @enum {string|null} */
+            pausedReason: "user" | "plan" | "failing" | null;
+            schedule: components["schemas"]["MonitorScheduleResponseDto"];
+            targets: (components["schemas"]["MonitorPagesTargetResponseDto"] | components["schemas"]["MonitorSiteTargetResponseDto"] | components["schemas"]["MonitorSearchTargetResponseDto"])[];
+            webhook: components["schemas"]["MonitorWebhookResponseDto"] | null;
+            retentionDays: number;
+            /** @enum {string} */
+            email: "off" | "daily";
+            nextRunAt: string | null;
+            lastRunAt: string | null;
+            lastCheck: components["schemas"]["MonitorCheckSummaryDto"] | null;
+            createdAt: string;
+        };
+        MonitorEnvelopeDto: {
+            data: components["schemas"]["MonitorResponseDto"];
+        };
+        MonitorListDto: {
+            data: components["schemas"]["MonitorResponseDto"][];
+        };
+        UpdateMonitorDto: {
+            /** @example Competitor pricing */
+            name?: string;
+            schedule?: components["schemas"]["MonitorScheduleDto"];
+            /** @description What to watch, up to 10 targets: pages, a whole site, or a search. */
+            targets?: (components["schemas"]["MonitorPagesTargetDto"] | components["schemas"]["MonitorSiteTargetDto"] | components["schemas"]["MonitorSearchTargetDto"])[];
+            webhook?: components["schemas"]["MonitorWebhookDto"];
+            /**
+             * @description How many days of check history to keep.
+             * @default 30
+             */
+            retentionDays?: number;
+            /**
+             * @description Send the workspace owner a daily email listing what this monitor found. Nothing is sent on a day without changes.
+             * @default off
+             * @enum {string}
+             */
+            email?: "off" | "daily";
+            /**
+             * @description Pause a monitor or start it again.
+             * @enum {string}
+             */
+            status?: "active" | "paused";
+        };
+        MonitorCheckListDto: {
+            data: components["schemas"]["MonitorCheckSummaryDto"][];
+        };
+        MonitorJudgeDto: {
+            /** @description Whether the change matched the target's goal. */
+            match: boolean;
+            /** @description One sentence on what in the change decided it. */
+            reason: string;
+        };
+        MonitorFieldChangeDto: {
+            /** @example Product.offers.price */
+            field: string;
+            previous: string | null;
+            current: string | null;
+        };
+        MonitorChangeDto: {
+            url: string;
+            targetId: string;
+            /** @enum {string} */
+            status: "same" | "new" | "changed" | "removed" | "error";
+            /** @description Title of a page that appeared on a site, or of a new search result. */
+            title: string | null;
+            /** @description Opening lines of a page that appeared on a site, or the snippet of a new search result. */
+            excerpt: string | null;
+            /** @description The verdict against the target's goal. Null when the target has no goal, the change was not checked, or the check could not be made. */
+            judge: components["schemas"]["MonitorJudgeDto"] | null;
+            /** @description Unified diff of the page text. */
+            diff: string | null;
+            fieldChanges: components["schemas"]["MonitorFieldChangeDto"][];
+            error?: string | null;
+            detectedAt: string;
+        };
+        MonitorCheckResponseDto: {
+            id: string;
+            /** @enum {string} */
+            status: "running" | "completed" | "partial" | "failed" | "skipped_no_credits" | "skipped_overlap";
+            /** @enum {string} */
+            trigger: "scheduled" | "manual";
+            /** @description Pages this check reads. */
+            totalPages: number;
+            same: number;
+            changed: number;
+            new: number;
+            removed: number;
+            /** @description Pages we could not read this time. Never counted as a change. */
+            error: number;
+            creditsUsed: number;
+            startedAt: string;
+            finishedAt: string | null;
+            monitorId: string;
+            changes: components["schemas"]["MonitorChangeDto"][];
+        };
+        MonitorCheckEnvelopeDto: {
+            data: components["schemas"]["MonitorCheckResponseDto"];
         };
         WebErrorBody: {
             /**
@@ -9960,6 +10528,1795 @@ export interface operations {
                      *       "error": {
                      *         "code": "IDEMPOTENCY_IN_PROGRESS",
                      *         "message": "A request with this Idempotency-Key is still running."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The target site did not respond, or we could not read that page. This is a fact about that URL rather than a fault on our side, and retrying it will not change the answer. When details.retryAfterSeconds is present, asking again before then returns this same answer. Nothing was charged. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "UPSTREAM_UNREACHABLE",
+                     *         "message": "The origin did not respond to any attempt we made."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The workspace exceeded its per-minute request limit. Read the RateLimit headers, or Retry-After on this response, and retry after the window resets. */
+            429: {
+                headers: {
+                    /** @description Seconds to wait before retrying. Prefer this over a fixed backoff. */
+                    "Retry-After"?: number;
+                    /** @description Requests remaining (r) and seconds until the window resets (t). */
+                    RateLimit?: string;
+                    /** @description The quota (q) for your plan and the window it applies over (w), in seconds. */
+                    "RateLimit-Policy"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "TOO_MANY_REQUESTS",
+                     *         "message": "Rate limit exceeded for this workspace and plan."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description Unexpected server error. Nothing was charged. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "INTERNAL_SERVER_ERROR",
+                     *         "message": "Internal server error"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description A dependency needed for the requested formats is unavailable. Safe to retry. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "SERVICE_UNAVAILABLE",
+                     *         "message": "The summary and json formats are not available."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+        };
+    };
+    monitorsList: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonitorListDto"];
+                };
+            };
+            /** @description The request body or query failed validation. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "VALIDATION_ERROR",
+                     *         "message": "url must be a valid URL"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The X-API-Key header is missing, malformed, or names a key that no longer exists. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "UNAUTHORIZED",
+                     *         "message": "Missing X-API-Key header. Agents: https://hydrafetch.com/auth.md"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The workspace has no credits left for this request. Nothing was charged and nothing was fetched. */
+            402: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "INSUFFICIENT_CREDITS",
+                     *         "message": "Insufficient credits"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The key is valid but the workspace may not make this request. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "WORKSPACE_BANNED",
+                     *         "message": "This workspace has been suspended and cannot make API requests."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description No such job, or the id belongs to another workspace. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Job not found"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The target site did not respond, or we could not read that page. This is a fact about that URL rather than a fault on our side, and retrying it will not change the answer. When details.retryAfterSeconds is present, asking again before then returns this same answer. Nothing was charged. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "UPSTREAM_UNREACHABLE",
+                     *         "message": "The origin did not respond to any attempt we made."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The workspace exceeded its per-minute request limit. Read the RateLimit headers, or Retry-After on this response, and retry after the window resets. */
+            429: {
+                headers: {
+                    /** @description Seconds to wait before retrying. Prefer this over a fixed backoff. */
+                    "Retry-After"?: number;
+                    /** @description Requests remaining (r) and seconds until the window resets (t). */
+                    RateLimit?: string;
+                    /** @description The quota (q) for your plan and the window it applies over (w), in seconds. */
+                    "RateLimit-Policy"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "TOO_MANY_REQUESTS",
+                     *         "message": "Rate limit exceeded for this workspace and plan."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description Unexpected server error. Nothing was charged. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "INTERNAL_SERVER_ERROR",
+                     *         "message": "Internal server error"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description A dependency needed for the requested formats is unavailable. Safe to retry. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "SERVICE_UNAVAILABLE",
+                     *         "message": "The summary and json formats are not available."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+        };
+    };
+    monitorsCreate: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Any unique string up to 255 visible characters. Send the same key when you retry a request: for 12 hours a repeat returns the first answer again, with an Idempotent-Replayed: true header, without doing the work or charging a second time. A repeat that arrives while the first is still running gets 409 IDEMPOTENCY_IN_PROGRESS; the same key with a different body gets 409 IDEMPOTENCY_KEY_REUSED. */
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateMonitorDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonitorEnvelopeDto"];
+                };
+            };
+            /** @description The request body or query failed validation. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "VALIDATION_ERROR",
+                     *         "message": "url must be a valid URL"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The X-API-Key header is missing, malformed, or names a key that no longer exists. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "UNAUTHORIZED",
+                     *         "message": "Missing X-API-Key header. Agents: https://hydrafetch.com/auth.md"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The workspace has no credits left for this request. Nothing was charged and nothing was fetched. */
+            402: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "INSUFFICIENT_CREDITS",
+                     *         "message": "Insufficient credits"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The key is valid but the workspace may not make this request. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "WORKSPACE_BANNED",
+                     *         "message": "This workspace has been suspended and cannot make API requests."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description No such job, or the id belongs to another workspace. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Job not found"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The Idempotency-Key on this request is still running from an earlier attempt (IDEMPOTENCY_IN_PROGRESS: wait Retry-After seconds and send it again to get the saved answer), or was already used with a different request body (IDEMPOTENCY_KEY_REUSED: use a new key). Nothing was charged. */
+            409: {
+                headers: {
+                    /** @description Seconds to wait before sending the same request again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "IDEMPOTENCY_IN_PROGRESS",
+                     *         "message": "A request with this Idempotency-Key is still running."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The target site did not respond, or we could not read that page. This is a fact about that URL rather than a fault on our side, and retrying it will not change the answer. When details.retryAfterSeconds is present, asking again before then returns this same answer. Nothing was charged. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "UPSTREAM_UNREACHABLE",
+                     *         "message": "The origin did not respond to any attempt we made."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The workspace exceeded its per-minute request limit. Read the RateLimit headers, or Retry-After on this response, and retry after the window resets. */
+            429: {
+                headers: {
+                    /** @description Seconds to wait before retrying. Prefer this over a fixed backoff. */
+                    "Retry-After"?: number;
+                    /** @description Requests remaining (r) and seconds until the window resets (t). */
+                    RateLimit?: string;
+                    /** @description The quota (q) for your plan and the window it applies over (w), in seconds. */
+                    "RateLimit-Policy"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "TOO_MANY_REQUESTS",
+                     *         "message": "Rate limit exceeded for this workspace and plan."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description Unexpected server error. Nothing was charged. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "INTERNAL_SERVER_ERROR",
+                     *         "message": "Internal server error"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description A dependency needed for the requested formats is unavailable. Safe to retry. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "SERVICE_UNAVAILABLE",
+                     *         "message": "The summary and json formats are not available."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+        };
+    };
+    monitorsGet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonitorEnvelopeDto"];
+                };
+            };
+            /** @description The request body or query failed validation. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "VALIDATION_ERROR",
+                     *         "message": "url must be a valid URL"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The X-API-Key header is missing, malformed, or names a key that no longer exists. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "UNAUTHORIZED",
+                     *         "message": "Missing X-API-Key header. Agents: https://hydrafetch.com/auth.md"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The workspace has no credits left for this request. Nothing was charged and nothing was fetched. */
+            402: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "INSUFFICIENT_CREDITS",
+                     *         "message": "Insufficient credits"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The key is valid but the workspace may not make this request. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "WORKSPACE_BANNED",
+                     *         "message": "This workspace has been suspended and cannot make API requests."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description No such job, or the id belongs to another workspace. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Job not found"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The target site did not respond, or we could not read that page. This is a fact about that URL rather than a fault on our side, and retrying it will not change the answer. When details.retryAfterSeconds is present, asking again before then returns this same answer. Nothing was charged. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "UPSTREAM_UNREACHABLE",
+                     *         "message": "The origin did not respond to any attempt we made."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The workspace exceeded its per-minute request limit. Read the RateLimit headers, or Retry-After on this response, and retry after the window resets. */
+            429: {
+                headers: {
+                    /** @description Seconds to wait before retrying. Prefer this over a fixed backoff. */
+                    "Retry-After"?: number;
+                    /** @description Requests remaining (r) and seconds until the window resets (t). */
+                    RateLimit?: string;
+                    /** @description The quota (q) for your plan and the window it applies over (w), in seconds. */
+                    "RateLimit-Policy"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "TOO_MANY_REQUESTS",
+                     *         "message": "Rate limit exceeded for this workspace and plan."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description Unexpected server error. Nothing was charged. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "INTERNAL_SERVER_ERROR",
+                     *         "message": "Internal server error"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description A dependency needed for the requested formats is unavailable. Safe to retry. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "SERVICE_UNAVAILABLE",
+                     *         "message": "The summary and json formats are not available."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+        };
+    };
+    monitorsRemove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The request body or query failed validation. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "VALIDATION_ERROR",
+                     *         "message": "url must be a valid URL"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The X-API-Key header is missing, malformed, or names a key that no longer exists. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "UNAUTHORIZED",
+                     *         "message": "Missing X-API-Key header. Agents: https://hydrafetch.com/auth.md"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The workspace has no credits left for this request. Nothing was charged and nothing was fetched. */
+            402: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "INSUFFICIENT_CREDITS",
+                     *         "message": "Insufficient credits"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The key is valid but the workspace may not make this request. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "WORKSPACE_BANNED",
+                     *         "message": "This workspace has been suspended and cannot make API requests."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description No such job, or the id belongs to another workspace. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Job not found"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The target site did not respond, or we could not read that page. This is a fact about that URL rather than a fault on our side, and retrying it will not change the answer. When details.retryAfterSeconds is present, asking again before then returns this same answer. Nothing was charged. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "UPSTREAM_UNREACHABLE",
+                     *         "message": "The origin did not respond to any attempt we made."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The workspace exceeded its per-minute request limit. Read the RateLimit headers, or Retry-After on this response, and retry after the window resets. */
+            429: {
+                headers: {
+                    /** @description Seconds to wait before retrying. Prefer this over a fixed backoff. */
+                    "Retry-After"?: number;
+                    /** @description Requests remaining (r) and seconds until the window resets (t). */
+                    RateLimit?: string;
+                    /** @description The quota (q) for your plan and the window it applies over (w), in seconds. */
+                    "RateLimit-Policy"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "TOO_MANY_REQUESTS",
+                     *         "message": "Rate limit exceeded for this workspace and plan."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description Unexpected server error. Nothing was charged. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "INTERNAL_SERVER_ERROR",
+                     *         "message": "Internal server error"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description A dependency needed for the requested formats is unavailable. Safe to retry. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "SERVICE_UNAVAILABLE",
+                     *         "message": "The summary and json formats are not available."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+        };
+    };
+    monitorsUpdate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateMonitorDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonitorEnvelopeDto"];
+                };
+            };
+            /** @description The request body or query failed validation. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "VALIDATION_ERROR",
+                     *         "message": "url must be a valid URL"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The X-API-Key header is missing, malformed, or names a key that no longer exists. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "UNAUTHORIZED",
+                     *         "message": "Missing X-API-Key header. Agents: https://hydrafetch.com/auth.md"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The workspace has no credits left for this request. Nothing was charged and nothing was fetched. */
+            402: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "INSUFFICIENT_CREDITS",
+                     *         "message": "Insufficient credits"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The key is valid but the workspace may not make this request. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "WORKSPACE_BANNED",
+                     *         "message": "This workspace has been suspended and cannot make API requests."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description No such job, or the id belongs to another workspace. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Job not found"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The target site did not respond, or we could not read that page. This is a fact about that URL rather than a fault on our side, and retrying it will not change the answer. When details.retryAfterSeconds is present, asking again before then returns this same answer. Nothing was charged. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "UPSTREAM_UNREACHABLE",
+                     *         "message": "The origin did not respond to any attempt we made."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The workspace exceeded its per-minute request limit. Read the RateLimit headers, or Retry-After on this response, and retry after the window resets. */
+            429: {
+                headers: {
+                    /** @description Seconds to wait before retrying. Prefer this over a fixed backoff. */
+                    "Retry-After"?: number;
+                    /** @description Requests remaining (r) and seconds until the window resets (t). */
+                    RateLimit?: string;
+                    /** @description The quota (q) for your plan and the window it applies over (w), in seconds. */
+                    "RateLimit-Policy"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "TOO_MANY_REQUESTS",
+                     *         "message": "Rate limit exceeded for this workspace and plan."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description Unexpected server error. Nothing was charged. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "INTERNAL_SERVER_ERROR",
+                     *         "message": "Internal server error"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description A dependency needed for the requested formats is unavailable. Safe to retry. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "SERVICE_UNAVAILABLE",
+                     *         "message": "The summary and json formats are not available."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+        };
+    };
+    monitorsRun: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Any unique string up to 255 visible characters. Send the same key when you retry a request: for 12 hours a repeat returns the first answer again, with an Idempotent-Replayed: true header, without doing the work or charging a second time. A repeat that arrives while the first is still running gets 409 IDEMPOTENCY_IN_PROGRESS; the same key with a different body gets 409 IDEMPOTENCY_KEY_REUSED. */
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonitorCheckSummaryDto"];
+                };
+            };
+            /** @description The request body or query failed validation. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "VALIDATION_ERROR",
+                     *         "message": "url must be a valid URL"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The X-API-Key header is missing, malformed, or names a key that no longer exists. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "UNAUTHORIZED",
+                     *         "message": "Missing X-API-Key header. Agents: https://hydrafetch.com/auth.md"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The workspace has no credits left for this request. Nothing was charged and nothing was fetched. */
+            402: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "INSUFFICIENT_CREDITS",
+                     *         "message": "Insufficient credits"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The key is valid but the workspace may not make this request. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "WORKSPACE_BANNED",
+                     *         "message": "This workspace has been suspended and cannot make API requests."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description No such job, or the id belongs to another workspace. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Job not found"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The Idempotency-Key on this request is still running from an earlier attempt (IDEMPOTENCY_IN_PROGRESS: wait Retry-After seconds and send it again to get the saved answer), or was already used with a different request body (IDEMPOTENCY_KEY_REUSED: use a new key). Nothing was charged. */
+            409: {
+                headers: {
+                    /** @description Seconds to wait before sending the same request again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "IDEMPOTENCY_IN_PROGRESS",
+                     *         "message": "A request with this Idempotency-Key is still running."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The target site did not respond, or we could not read that page. This is a fact about that URL rather than a fault on our side, and retrying it will not change the answer. When details.retryAfterSeconds is present, asking again before then returns this same answer. Nothing was charged. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "UPSTREAM_UNREACHABLE",
+                     *         "message": "The origin did not respond to any attempt we made."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The workspace exceeded its per-minute request limit. Read the RateLimit headers, or Retry-After on this response, and retry after the window resets. */
+            429: {
+                headers: {
+                    /** @description Seconds to wait before retrying. Prefer this over a fixed backoff. */
+                    "Retry-After"?: number;
+                    /** @description Requests remaining (r) and seconds until the window resets (t). */
+                    RateLimit?: string;
+                    /** @description The quota (q) for your plan and the window it applies over (w), in seconds. */
+                    "RateLimit-Policy"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "TOO_MANY_REQUESTS",
+                     *         "message": "Rate limit exceeded for this workspace and plan."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description Unexpected server error. Nothing was charged. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "INTERNAL_SERVER_ERROR",
+                     *         "message": "Internal server error"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description A dependency needed for the requested formats is unavailable. Safe to retry. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "SERVICE_UNAVAILABLE",
+                     *         "message": "The summary and json formats are not available."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+        };
+    };
+    monitorsChecks: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonitorCheckListDto"];
+                };
+            };
+            /** @description The request body or query failed validation. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "VALIDATION_ERROR",
+                     *         "message": "url must be a valid URL"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The X-API-Key header is missing, malformed, or names a key that no longer exists. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "UNAUTHORIZED",
+                     *         "message": "Missing X-API-Key header. Agents: https://hydrafetch.com/auth.md"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The workspace has no credits left for this request. Nothing was charged and nothing was fetched. */
+            402: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "INSUFFICIENT_CREDITS",
+                     *         "message": "Insufficient credits"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The key is valid but the workspace may not make this request. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "WORKSPACE_BANNED",
+                     *         "message": "This workspace has been suspended and cannot make API requests."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description No such job, or the id belongs to another workspace. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Job not found"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The target site did not respond, or we could not read that page. This is a fact about that URL rather than a fault on our side, and retrying it will not change the answer. When details.retryAfterSeconds is present, asking again before then returns this same answer. Nothing was charged. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "UPSTREAM_UNREACHABLE",
+                     *         "message": "The origin did not respond to any attempt we made."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The workspace exceeded its per-minute request limit. Read the RateLimit headers, or Retry-After on this response, and retry after the window resets. */
+            429: {
+                headers: {
+                    /** @description Seconds to wait before retrying. Prefer this over a fixed backoff. */
+                    "Retry-After"?: number;
+                    /** @description Requests remaining (r) and seconds until the window resets (t). */
+                    RateLimit?: string;
+                    /** @description The quota (q) for your plan and the window it applies over (w), in seconds. */
+                    "RateLimit-Policy"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "TOO_MANY_REQUESTS",
+                     *         "message": "Rate limit exceeded for this workspace and plan."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description Unexpected server error. Nothing was charged. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "INTERNAL_SERVER_ERROR",
+                     *         "message": "Internal server error"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description A dependency needed for the requested formats is unavailable. Safe to retry. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "SERVICE_UNAVAILABLE",
+                     *         "message": "The summary and json formats are not available."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+        };
+    };
+    monitorsCheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                checkId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonitorCheckEnvelopeDto"];
+                };
+            };
+            /** @description The request body or query failed validation. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "VALIDATION_ERROR",
+                     *         "message": "url must be a valid URL"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The X-API-Key header is missing, malformed, or names a key that no longer exists. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "UNAUTHORIZED",
+                     *         "message": "Missing X-API-Key header. Agents: https://hydrafetch.com/auth.md"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The workspace has no credits left for this request. Nothing was charged and nothing was fetched. */
+            402: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "INSUFFICIENT_CREDITS",
+                     *         "message": "Insufficient credits"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The key is valid but the workspace may not make this request. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "WORKSPACE_BANNED",
+                     *         "message": "This workspace has been suspended and cannot make API requests."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description No such job, or the id belongs to another workspace. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Job not found"
                      *       },
                      *       "meta": {
                      *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
