@@ -229,7 +229,7 @@ export class Hydrafetch {
   }
 
   private async request<T>(
-    method: 'GET' | 'POST',
+    method: 'GET' | 'POST' | 'DELETE',
     path: string,
     body?: unknown,
     query?: Record<string, unknown>,
@@ -428,6 +428,14 @@ export class Hydrafetch {
 
   batchStatus(id: string): Promise<JobResult> {
     return this.request<JobResult>('GET', `/v1/web/batch/${encodeURIComponent(id)}`);
+  }
+
+  cancelCrawl(id: string): Promise<JobResult> {
+    return this.request<JobResult>('DELETE', `/v1/web/crawl/${encodeURIComponent(id)}`);
+  }
+
+  cancelBatch(id: string): Promise<JobResult> {
+    return this.request<JobResult>('DELETE', `/v1/web/batch/${encodeURIComponent(id)}`);
   }
 
   crawlAndWait(url: string, options: CrawlOptions = {}, wait: WaitOptions = {}): Promise<JobResult> {

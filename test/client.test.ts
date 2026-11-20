@@ -173,6 +173,18 @@ describe('errors', () => {
 });
 
 describe('jobs', () => {
+  it('cancels a crawl or a batch with a DELETE on its id', async () => {
+    const fetchImpl = mockFetch(() => jsonResponse({ success: true, data: { status: 'cancelled' } }));
+    const client = clientWith(fetchImpl);
+    const crawl = await client.cancelCrawl('c 1');
+    const batch = await client.cancelBatch('b_1');
+    expect([crawl.status, batch.status]).toEqual(['cancelled', 'cancelled']);
+    expect([callAt(fetchImpl, 0), callAt(fetchImpl, 1)].map((c) => [c.init.method, c.url])).toEqual([
+      ['DELETE', 'https://api.hydrafetch.com/v1/web/crawl/c%201'],
+      ['DELETE', 'https://api.hydrafetch.com/v1/web/batch/b_1'],
+    ]);
+  });
+
   it('reads batchId from the top level, not from data', async () => {
     const fetchImpl = mockFetch(() => jsonResponse({ batchId: 'b_1', status: 'pending' }, 201));
     const id = await clientWith(fetchImpl).startBatch(['https://a.example']);

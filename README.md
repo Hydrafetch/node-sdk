@@ -305,6 +305,7 @@ const hf = new Hydrafetch({
 | `startCrawl(url, options?)` | `string` | 1 per page |
 | `startBatch(urls, options?)` | `string` | 1 per page |
 | `crawlStatus(id)`, `batchStatus(id)` | `JobResult` | free |
+| `cancelCrawl(id)`, `cancelBatch(id)` | `JobResult` | free, pages not yet read are not charged |
 | `rateResult(input)` | `RateResultResponse` | free |
 
 Failed requests are not billed. Pricing does not vary with page difficulty, so there is no render, stealth or proxy option to set.
