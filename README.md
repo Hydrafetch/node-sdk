@@ -304,6 +304,7 @@ const hf = new Hydrafetch({
 | `batchAndWait(urls, options?, wait?)` | `JobResult` | 1 per page |
 | `startCrawl(url, options?)` | `string` | 1 per page |
 | `startBatch(urls, options?)` | `string` | 1 per page |
+| `submitBatch(urls, options?)` | `BatchAccepted` (`batchId`, `status`, `invalidUrls`) | 1 per page |
 | `crawlStatus(id)`, `batchStatus(id)` | `JobResult` | free |
 | `cancelCrawl(id)`, `cancelBatch(id)` | `JobResult` | free, pages not yet read are not charged |
 | `rateResult(input)` | `RateResultResponse` | free |

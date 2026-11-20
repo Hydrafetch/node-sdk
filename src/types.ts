@@ -71,6 +71,8 @@ export type CrawlOptions = Omit<Schemas['CrawlRequestDto'], 'url'>;
 
 export type BatchOptions = Omit<Schemas['BatchRequestDto'], 'urls'>;
 
+export type BatchAccepted = Schemas['BatchAcceptedDto'];
+
 export type JobResult = Schemas['CrawlStatusResponseDto'];
 
 export type JobStatus = JobResult['status'];

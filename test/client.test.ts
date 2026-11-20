@@ -173,6 +173,14 @@ describe('errors', () => {
 });
 
 describe('jobs', () => {
+  it('says which URLs a batch skipped as malformed', async () => {
+    const fetchImpl = mockFetch(() =>
+      jsonResponse({ batchId: 'b_1', status: 'queued', invalidUrls: ['htps//a'] }, 201),
+    );
+    const accepted = await clientWith(fetchImpl).submitBatch(['https://a.example', 'htps//a']);
+    expect(accepted).toEqual({ batchId: 'b_1', status: 'queued', invalidUrls: ['htps//a'] });
+  });
+
   it('cancels a crawl or a batch with a DELETE on its id', async () => {
     const fetchImpl = mockFetch(() => jsonResponse({ success: true, data: { status: 'cancelled' } }));
     const client = clientWith(fetchImpl);

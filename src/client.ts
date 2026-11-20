@@ -1,5 +1,6 @@
 import { HydrafetchError, HydrafetchTimeoutError } from './errors.js';
 import type {
+  BatchAccepted,
   BatchOptions,
   BrandOptions,
   BrandResult,
@@ -410,20 +411,28 @@ export class Hydrafetch {
     return this.request<JobResult>('GET', `/v1/web/crawl/${encodeURIComponent(id)}`);
   }
 
-  async startBatch(urls: string[], options: BatchOptions = {}): Promise<string> {
-    const res = await this.request<{ batchId?: string; id?: string }>('POST', '/v1/web/batch', {
+  async submitBatch(urls: string[], options: BatchOptions = {}): Promise<BatchAccepted> {
+    const res = await this.request<Partial<BatchAccepted> & { id?: string }>('POST', '/v1/web/batch', {
       urls,
       ...options,
     });
-    const id = res.batchId ?? res.id;
-    if (!id) {
+    const batchId = res.batchId ?? res.id;
+    if (!batchId) {
       throw new HydrafetchError({
         code: 'NO_JOB_ID',
         message: 'Batch accepted but returned no id.',
         status: 502,
       });
     }
-    return id;
+    return {
+      batchId,
+      status: res.status ?? 'queued',
+      ...(res.invalidUrls?.length ? { invalidUrls: res.invalidUrls } : {}),
+    };
+  }
+
+  async startBatch(urls: string[], options: BatchOptions = {}): Promise<string> {
+    return (await this.submitBatch(urls, options)).batchId;
   }
 
   batchStatus(id: string): Promise<JobResult> {
