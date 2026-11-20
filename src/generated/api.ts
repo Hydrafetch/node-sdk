@@ -377,7 +377,11 @@ export interface paths {
         get: operations["crawlStatus"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Cancel a crawl
+         * @description Stop a running crawl. Pages already read keep their results and their charge; pages not yet read are marked cancelled and cost nothing. Cancelling a crawl that already finished returns its status unchanged.
+         */
+        delete: operations["crawlCancelCrawl"];
         options?: never;
         head?: never;
         patch?: never;
@@ -397,7 +401,11 @@ export interface paths {
         get: operations["crawlBatchStatus"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Cancel a batch
+         * @description Stop a running batch. URLs already read keep their results and their charge; the rest are marked cancelled and cost nothing. Cancelling a batch that already finished returns its status unchanged.
+         */
+        delete: operations["crawlCancelBatch"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1301,6 +1309,13 @@ export interface components {
             includeLinks?: boolean;
             /** @description Extra milliseconds to let the page settle before capture. */
             waitFor?: number;
+            /**
+             * @description A CSS selector to wait for before capture. The page is rendered in a browser and read once an element matching it exists, or when the time budget runs out, in which case the result says the element never appeared.
+             * @example .price
+             */
+            waitForSelector?: string;
+            /** @description Render the page as a phone would see it: a phone-sized screen, touch and a mobile browser identity. Use it for sites that serve different content to phones. */
+            mobile?: boolean;
             /** @description Overall time budget for the request, in milliseconds. */
             timeout?: number;
             location?: components["schemas"]["LocationDto"];
@@ -1558,6 +1573,13 @@ export interface components {
             includeLinks?: boolean;
             /** @description Extra milliseconds to let the page settle before capture. */
             waitFor?: number;
+            /**
+             * @description A CSS selector to wait for before capture. The page is rendered in a browser and read once an element matching it exists, or when the time budget runs out, in which case the result says the element never appeared.
+             * @example .price
+             */
+            waitForSelector?: string;
+            /** @description Render the page as a phone would see it: a phone-sized screen, touch and a mobile browser identity. Use it for sites that serve different content to phones. */
+            mobile?: boolean;
             /** @description Overall time budget for the request, in milliseconds. */
             timeout?: number;
             location?: components["schemas"]["LocationDto"];
@@ -1872,6 +1894,13 @@ export interface components {
             includeLinks?: boolean;
             /** @description Extra milliseconds to let the page settle before capture. */
             waitFor?: number;
+            /**
+             * @description A CSS selector to wait for before capture. The page is rendered in a browser and read once an element matching it exists, or when the time budget runs out, in which case the result says the element never appeared.
+             * @example .price
+             */
+            waitForSelector?: string;
+            /** @description Render the page as a phone would see it: a phone-sized screen, touch and a mobile browser identity. Use it for sites that serve different content to phones. */
+            mobile?: boolean;
             /** @description Per-page time budget, in milliseconds. */
             timeout?: number;
             location?: components["schemas"]["LocationDto"];
@@ -1925,6 +1954,11 @@ export interface components {
              */
             allowExternalLinks?: boolean;
             /**
+             * @description Crawl the whole site instead of only the section the starting URL is in. A crawl of /docs stays under /docs unless this is on or includePaths is set. Default off.
+             * @example false
+             */
+            crawlEntireDomain?: boolean;
+            /**
              * @description Treat URLs that differ only by query string as the same page. Default off.
              * @example false
              */
@@ -1955,7 +1989,7 @@ export interface components {
         };
         BatchRequestDto: {
             /**
-             * @description The explicit list of URLs to scrape. Each must be http(s).
+             * @description The explicit list of URLs to scrape, each http(s). Malformed entries are skipped and returned in invalidUrls; the batch is refused only when none is valid.
              * @example [
              *       "https://example.com/a",
              *       "https://example.com/b"
@@ -1979,6 +2013,13 @@ export interface components {
              * @enum {string}
              */
             status: "queued";
+            /**
+             * @description Entries that were not valid http(s) URLs and were skipped. Absent when every URL was valid.
+             * @example [
+             *       "htps//example.com"
+             *     ]
+             */
+            invalidUrls?: string[];
         };
         CrawlPageResultDto: {
             /**
@@ -7421,7 +7462,441 @@ export interface operations {
             };
         };
     };
+    crawlCancelCrawl: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The crawl id returned when the crawl started. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CrawlStatusEnvelopeDto"];
+                };
+            };
+            /** @description The request body or query failed validation. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "VALIDATION_ERROR",
+                     *         "message": "url must be a valid URL"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The X-API-Key header is missing, malformed, or names a key that no longer exists. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "UNAUTHORIZED",
+                     *         "message": "Missing X-API-Key header. Agents: https://hydrafetch.com/auth.md"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The workspace has no credits left for this request. Nothing was charged and nothing was fetched. */
+            402: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "INSUFFICIENT_CREDITS",
+                     *         "message": "Insufficient credits"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The key is valid but the workspace may not make this request. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "WORKSPACE_BANNED",
+                     *         "message": "This workspace has been suspended and cannot make API requests."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description No such job, or the id belongs to another workspace. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Job not found"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The target site did not respond, or we could not read that page. This is a fact about that URL rather than a fault on our side, and retrying it will not change the answer. When details.retryAfterSeconds is present, asking again before then returns this same answer. Nothing was charged. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "UPSTREAM_UNREACHABLE",
+                     *         "message": "The origin did not respond to any attempt we made."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The workspace exceeded its per-minute request limit. Read the RateLimit headers, or Retry-After on this response, and retry after the window resets. */
+            429: {
+                headers: {
+                    /** @description Seconds to wait before retrying. Prefer this over a fixed backoff. */
+                    "Retry-After"?: number;
+                    /** @description Requests remaining (r) and seconds until the window resets (t). */
+                    RateLimit?: string;
+                    /** @description The quota (q) for your plan and the window it applies over (w), in seconds. */
+                    "RateLimit-Policy"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "TOO_MANY_REQUESTS",
+                     *         "message": "Rate limit exceeded for this workspace and plan."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description Unexpected server error. Nothing was charged. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "INTERNAL_SERVER_ERROR",
+                     *         "message": "Internal server error"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description A dependency needed for the requested formats is unavailable. Safe to retry. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "SERVICE_UNAVAILABLE",
+                     *         "message": "The summary and json formats are not available."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+        };
+    };
     crawlBatchStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The batch id returned when the batch started. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CrawlStatusEnvelopeDto"];
+                };
+            };
+            /** @description The request body or query failed validation. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "VALIDATION_ERROR",
+                     *         "message": "url must be a valid URL"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The X-API-Key header is missing, malformed, or names a key that no longer exists. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "UNAUTHORIZED",
+                     *         "message": "Missing X-API-Key header. Agents: https://hydrafetch.com/auth.md"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The workspace has no credits left for this request. Nothing was charged and nothing was fetched. */
+            402: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "INSUFFICIENT_CREDITS",
+                     *         "message": "Insufficient credits"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The key is valid but the workspace may not make this request. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "WORKSPACE_BANNED",
+                     *         "message": "This workspace has been suspended and cannot make API requests."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description No such job, or the id belongs to another workspace. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Job not found"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The target site did not respond, or we could not read that page. This is a fact about that URL rather than a fault on our side, and retrying it will not change the answer. When details.retryAfterSeconds is present, asking again before then returns this same answer. Nothing was charged. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "UPSTREAM_UNREACHABLE",
+                     *         "message": "The origin did not respond to any attempt we made."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description The workspace exceeded its per-minute request limit. Read the RateLimit headers, or Retry-After on this response, and retry after the window resets. */
+            429: {
+                headers: {
+                    /** @description Seconds to wait before retrying. Prefer this over a fixed backoff. */
+                    "Retry-After"?: number;
+                    /** @description Requests remaining (r) and seconds until the window resets (t). */
+                    RateLimit?: string;
+                    /** @description The quota (q) for your plan and the window it applies over (w), in seconds. */
+                    "RateLimit-Policy"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "TOO_MANY_REQUESTS",
+                     *         "message": "Rate limit exceeded for this workspace and plan."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description Unexpected server error. Nothing was charged. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "INTERNAL_SERVER_ERROR",
+                     *         "message": "Internal server error"
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+            /** @description A dependency needed for the requested formats is unavailable. Safe to retry. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "success": false,
+                     *       "error": {
+                     *         "code": "SERVICE_UNAVAILABLE",
+                     *         "message": "The summary and json formats are not available."
+                     *       },
+                     *       "meta": {
+                     *         "requestId": "019e8a3c-9f0b-7c12-88ab-1d2e3f4a5b6c"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebError"];
+                };
+            };
+        };
+    };
+    crawlCancelBatch: {
         parameters: {
             query?: never;
             header?: never;
