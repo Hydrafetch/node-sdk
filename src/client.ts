@@ -1,5 +1,11 @@
 import { HydrafetchError, HydrafetchTimeoutError } from './errors.js';
 import type {
+  Monitor,
+  MonitorChanges,
+  MonitorCheck,
+  MonitorCheckSummary,
+  MonitorInput,
+  MonitorPage,
   BatchAccepted,
   BatchOptions,
   BrandOptions,
@@ -230,7 +236,7 @@ export class Hydrafetch {
   }
 
   private async request<T>(
-    method: 'GET' | 'POST' | 'DELETE',
+    method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
     path: string,
     body?: unknown,
     query?: Record<string, unknown>,
@@ -453,6 +459,49 @@ export class Hydrafetch {
 
   batchAndWait(urls: string[], options: BatchOptions = {}, wait: WaitOptions = {}): Promise<JobResult> {
     return this.startBatch(urls, options).then((id) => this.waitForJob(() => this.batchStatus(id), wait));
+  }
+
+  async createMonitor(input: MonitorInput): Promise<Monitor> {
+    return this.request<Monitor>('POST', '/v1/web/monitors', input);
+  }
+
+  async listMonitors(page: MonitorPage = {}): Promise<Monitor[]> {
+    return this.request<Monitor[]>('GET', '/v1/web/monitors', undefined, { ...page });
+  }
+
+  async getMonitor(id: string): Promise<Monitor> {
+    return this.request<Monitor>('GET', `/v1/web/monitors/${encodeURIComponent(id)}`);
+  }
+
+  async updateMonitor(id: string, changes: MonitorChanges): Promise<Monitor> {
+    return this.request<Monitor>('PATCH', `/v1/web/monitors/${encodeURIComponent(id)}`, changes);
+  }
+
+  async deleteMonitor(id: string): Promise<void> {
+    await this.request<void>('DELETE', `/v1/web/monitors/${encodeURIComponent(id)}`);
+  }
+
+  async runMonitor(id: string): Promise<MonitorCheckSummary> {
+    return this.request<MonitorCheckSummary>(
+      'POST',
+      `/v1/web/monitors/${encodeURIComponent(id)}/run`,
+    );
+  }
+
+  async listMonitorChecks(id: string, page: MonitorPage = {}): Promise<MonitorCheckSummary[]> {
+    return this.request<MonitorCheckSummary[]>(
+      'GET',
+      `/v1/web/monitors/${encodeURIComponent(id)}/checks`,
+      undefined,
+      { ...page },
+    );
+  }
+
+  async getMonitorCheck(id: string, checkId: string): Promise<MonitorCheck> {
+    return this.request<MonitorCheck>(
+      'GET',
+      `/v1/web/monitors/${encodeURIComponent(id)}/checks/${encodeURIComponent(checkId)}`,
+    );
   }
 
   private async followCallJob<T>(poll: string): Promise<T> {

@@ -203,6 +203,39 @@ acme.opened.forEach((j) => console.log(j.title, j.seniority, j.firstSeenAt));
 
 A search costs 1 credit per 10 jobs returned, and an empty one is free. Hiring changes cost 1 credit per company we have jobs for; companies we do not track yet come back empty and are free.
 
+## Monitors
+
+Watch pages, a whole site or a search on a schedule and hear about what changed. Monitors are available on paid plans.
+
+```ts
+const monitor = await hf.createMonitor({
+  name: 'Competitors',
+  schedule: { every: '1h' },
+  targets: [
+    { type: 'pages', urls: ['https://acme.com/pricing'], goal: 'a plan gets cheaper' },
+    { type: 'site', url: 'https://acme.com/blog' },
+    { type: 'search', query: 'acme funding' },
+  ],
+  webhook: { url: 'https://your-app.com/hooks/hydrafetch' },
+});
+```
+
+A pages target reports text that changed, as a line diff, plus fields such as price and availability. A site target reports pages that appear or go away, with each new page's title and opening lines. A search target reports results it has never returned before. With a `goal`, a change only alerts when it matches, and every change keeps the verdict and a one-sentence reason.
+
+Checks run in the background. Your webhook receives `monitor.change` for each change and `monitor.check.completed` once a check ends, or read them yourself:
+
+```ts
+const [latest] = await hf.listMonitorChecks(monitor.id, { limit: 1 });
+const { changes } = await hf.getMonitorCheck(monitor.id, latest.id);
+
+changes.forEach((c) => console.log(c.status, c.url, c.judge?.reason ?? c.diff));
+
+await hf.runMonitor(monitor.id); // check now, outside the schedule
+await hf.updateMonitor(monitor.id, { status: 'paused' });
+```
+
+A page read costs 1 credit, a site costs 1 per check plus 1 per new page read, and a search costs 1 per check. A goal adds 1 credit per change it checks. Pages that cannot be read are not charged.
+
 ## Brand data
 
 ```ts
@@ -307,6 +340,11 @@ const hf = new Hydrafetch({
 | `submitBatch(urls, options?)` | `BatchAccepted` (`batchId`, `status`, `invalidUrls`) | 1 per page |
 | `crawlStatus(id)`, `batchStatus(id)` | `JobResult` | free |
 | `cancelCrawl(id)`, `cancelBatch(id)` | `JobResult` | free, pages not yet read are not charged |
+| `createMonitor(input)`, `updateMonitor(id, changes)` | `Monitor` | free; checks are charged as they run |
+| `listMonitors(page?)`, `getMonitor(id)` | `Monitor[]`, `Monitor` | free |
+| `runMonitor(id)` | `MonitorCheckSummary` | as a scheduled check |
+| `listMonitorChecks(id, page?)`, `getMonitorCheck(id, checkId)` | `MonitorCheckSummary[]`, `MonitorCheck` | free |
+| `deleteMonitor(id)` | `void` | free |
 | `rateResult(input)` | `RateResultResponse` | free |
 
 Failed requests are not billed. Pricing does not vary with page difficulty, so there is no render, stealth or proxy option to set.

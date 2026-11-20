@@ -135,3 +135,22 @@ export type NewsTimeRange = NonNullable<NewsOptions['timeRange']>;
 export type NewsArticle = Schemas['NewsResultItemDto'];
 
 export type NewsResult = Schemas['NewsResultDto'];
+
+export type MonitorInput = Schemas['CreateMonitorDto'];
+
+export type MonitorChanges = Schemas['UpdateMonitorDto'];
+
+export type MonitorTarget = MonitorInput['targets'][number];
+
+export type Monitor = Schemas['MonitorResponseDto'];
+
+export type MonitorCheckSummary = Schemas['MonitorCheckSummaryDto'];
+
+export type MonitorCheck = Schemas['MonitorCheckResponseDto'];
+
+export type MonitorChange = Schemas['MonitorChangeDto'];
+
+export interface MonitorPage {
+  limit?: number;
+  offset?: number;
+}

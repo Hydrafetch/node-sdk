@@ -530,3 +530,74 @@ describe('retry timing', () => {
     expect(f).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('monitors', () => {
+  const monitor = { id: 'mon_1', name: 'Pricing', status: 'active' };
+
+  it('creates a monitor with the targets, schedule and goal as given', async () => {
+    const f = mockFetch(() => jsonResponse({ success: true, data: monitor }, 201));
+    const out = await clientWith(f).createMonitor({
+      name: 'Pricing',
+      schedule: { every: '1h' },
+      targets: [
+        { type: 'pages', urls: ['https://acme.com/pricing'], goal: 'the price drops' },
+        { type: 'site', url: 'https://acme.com/blog' },
+        { type: 'search', query: 'acme series b' },
+      ],
+      email: 'daily',
+    });
+    expect(out).toEqual(monitor);
+    expect(callAt(f).url).toBe('https://api.hydrafetch.com/v1/web/monitors');
+    expect(callAt(f).init.method).toBe('POST');
+    expect(bodyOf(f)).toMatchObject({
+      schedule: { every: '1h' },
+      email: 'daily',
+      targets: [
+        { type: 'pages', goal: 'the price drops' },
+        { type: 'site', url: 'https://acme.com/blog' },
+        { type: 'search', query: 'acme series b' },
+      ],
+    });
+  });
+
+  it('pages through monitors and their checks with limit and offset', async () => {
+    const f = mockFetch(() => jsonResponse({ success: true, data: [] }));
+    const hf = clientWith(f);
+    await hf.listMonitors({ limit: 10, offset: 20 });
+    await hf.listMonitorChecks('mon_1', { limit: 5 });
+    expect(callAt(f, 0).url).toBe('https://api.hydrafetch.com/v1/web/monitors?limit=10&offset=20');
+    expect(callAt(f, 1).url).toBe('https://api.hydrafetch.com/v1/web/monitors/mon_1/checks?limit=5');
+  });
+
+  it('updates with PATCH, deletes with DELETE and starts a check with POST', async () => {
+    const f = mockFetch((url, init) =>
+      init.method === 'DELETE' ? new Response(null, { status: 204 }) : jsonResponse({ success: true, data: monitor }),
+    );
+    const hf = clientWith(f);
+    await hf.updateMonitor('mon_1', { status: 'paused' });
+    await hf.deleteMonitor('mon_1');
+    await hf.runMonitor('mon_1');
+    await hf.getMonitorCheck('mon_1', 'chk 1');
+    expect([0, 1, 2, 3].map((i) => [callAt(f, i).init.method, callAt(f, i).url])).toEqual([
+      ['PATCH', 'https://api.hydrafetch.com/v1/web/monitors/mon_1'],
+      ['DELETE', 'https://api.hydrafetch.com/v1/web/monitors/mon_1'],
+      ['POST', 'https://api.hydrafetch.com/v1/web/monitors/mon_1/run'],
+      ['GET', 'https://api.hydrafetch.com/v1/web/monitors/mon_1/checks/chk%201'],
+    ]);
+    expect(bodyOf(f, 0)).toEqual({ status: 'paused' });
+  });
+
+  it('surfaces the paid-plan refusal as a typed error', async () => {
+    const f = mockFetch(() =>
+      jsonResponse(
+        { success: false, error: { code: 'FORBIDDEN', message: 'Monitors are available on paid plans.' } },
+        403,
+      ),
+    );
+    const err = await clientWith(f)
+      .createMonitor({ name: 'x', schedule: { every: '1d' }, targets: [{ type: 'search', query: 'q' }] })
+      .catch((e) => e);
+    expect(err).toBeInstanceOf(HydrafetchError);
+    expect(err.status).toBe(403);
+  });
+});
